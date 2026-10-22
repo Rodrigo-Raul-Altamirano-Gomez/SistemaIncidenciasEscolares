@@ -1,0 +1,17 @@
+# Configuración local, credenciales y registros.
+.env
+.env.*
+!.env.example
+*.log
+.idea/
+*.iml
+.vscode/
+
+# Compilación y archivos temporales.
+target/
+.DS_Store
+Thumbs.db
+
+# Matrículas con datos personales: conservar fuera del repositorio.
+*.xlsx
+*.xls

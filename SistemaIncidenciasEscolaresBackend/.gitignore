@@ -1,0 +1,13 @@
+/target/
+/.idea/
+*.iml
+*.log
+
+# Archivos de matrícula con datos personales: conservar fuera del repositorio.
+/*.xlsx
+/*.xls
+
+# Configuración local y credenciales.
+.env
+.env.*
+!.env.example
