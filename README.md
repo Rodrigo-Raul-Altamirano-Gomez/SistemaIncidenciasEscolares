@@ -1,6 +1,6 @@
 # Sistema de incidencias escolares
 
-Proyecto para registrar y dar seguimiento a incidencias escolares, organizar la atención institucional y conservar la trazabilidad de reportes, actuaciones y documentos. Su alcance funcional está definido en la [Especificación de Requisitos de Software (ERS v1.2)](SistemaIncidenciasEscolaresBackend/ERS_Incidencias_Escolares.md), orientada inicialmente a secundaria en Perú.
+Proyecto para registrar y dar seguimiento a incidencias escolares, organizar la atención institucional y conservar la trazabilidad de reportes, actuaciones y documentos. Su alcance funcional está definido en la Especificación de Requisitos de Software (ERS v1.2), orientada inicialmente a secundaria en Perú.
 
 ## Estado de desarrollo
 
@@ -35,8 +35,6 @@ SistemaIncidenciasEscolares/
     ├── pom.xml
     ├── mvnw / mvnw.cmd
     ├── .mvn/wrapper/
-    ├── ERS_Incidencias_Escolares.md
-    ├── docs/domain/IMPLEMENTACION_DOMAIN.md
     └── src/
         ├── main/java/pe/edu/incidencias/domain/
         └── test/java/pe/edu/incidencias/domain/
@@ -81,8 +79,8 @@ No hay todavía un servidor o interfaz que iniciar: el JAR corresponde al núcle
 5. Integrar autenticación, API, interfaz, parser Excel, almacenamiento de archivos, auditoría persistente y respaldos.
 6. Validar la aceptación integral de requisitos y preparar el despliegue.
 
-El punto de continuación propuesto en la documentación es la importación selectiva, conciliación y contexto. El detalle de decisiones, cobertura, pruebas y limitaciones está en [Implementación del dominio](SistemaIncidenciasEscolaresBackend/docs/domain/IMPLEMENTACION_DOMAIN.md).
+El punto de continuación propuesto es la importación selectiva, conciliación y contexto.
 
 ## Archivos del repositorio
 
-Se versionan el código fuente, las pruebas, el Wrapper de Maven y la documentación. Los `.gitignore` excluyen compilados, configuración local del IDE, registros y credenciales. Los archivos de matrícula con datos personales deben mantenerse fuera del repositorio; los ejemplos de prueba son ficticios.
+Se versionan el código fuente, las pruebas, el Wrapper de Maven y el README principal. Los `.gitignore` excluyen compilados, configuración local del IDE, registros y credenciales. Los archivos de matrícula con datos personales deben mantenerse fuera del repositorio; los ejemplos de prueba son ficticios.

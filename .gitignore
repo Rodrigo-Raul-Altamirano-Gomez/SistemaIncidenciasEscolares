@@ -15,3 +15,8 @@ Thumbs.db
 # Matrículas con datos personales: conservar fuera del repositorio.
 *.xlsx
 *.xls
+
+# Solo se publica el README principal; el resto de Markdown queda local.
+*.[mM][dD]
+!/README.md
+
