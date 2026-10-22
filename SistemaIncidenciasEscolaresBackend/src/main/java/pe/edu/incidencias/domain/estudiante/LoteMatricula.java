@@ -12,7 +12,12 @@ import java.util.UUID;
 /** Propuesta revisable. Año, fecha efectiva, procedencia e IDs son explícitos, nunca inferidos. */
 public record LoteMatricula(UUID id, String procedencia, String hoja, int anio, LocalDate fechaEfectiva,
                             Optional<GrupoEscolar> grupoComun, List<FilaMatricula> filas,
-                            Map<Integer, Resolucion> resoluciones) {
+                            Map<Integer, Resolucion> resoluciones,
+                            Map<Integer, RectificacionMatricula> rectificaciones) {
+    public LoteMatricula(UUID id, String procedencia, String hoja, int anio, LocalDate fechaEfectiva,
+                        Optional<GrupoEscolar> grupoComun, List<FilaMatricula> filas, Map<Integer, Resolucion> resoluciones) {
+        this(id, procedencia, hoja, anio, fechaEfectiva, grupoComun, filas, resoluciones, Map.of());
+    }
     public enum Accion { VINCULAR, CREAR, EXCLUIR }
     public record Resolucion(Accion accion, Optional<UUID> estudianteId) {
         public Resolucion {
@@ -36,12 +41,15 @@ public record LoteMatricula(UUID id, String procedencia, String hoja, int anio, 
         Objects.requireNonNull(grupoComun, "grupoComun");
         filas = List.copyOf(filas);
         resoluciones = Map.copyOf(resoluciones);
+        rectificaciones = Map.copyOf(rectificaciones);
         var numeros = new HashSet<Integer>();
         for (var fila : filas) {
             if (!numeros.add(fila.numero())) throw new IllegalArgumentException("Fila repetida en la hoja");
         }
         if (!numeros.containsAll(resoluciones.keySet()))
             throw new IllegalArgumentException("Resolución de una fila ajena al lote");
+        if (!numeros.containsAll(rectificaciones.keySet()))
+            throw new IllegalArgumentException("Rectificación de una fila ajena al lote");
     }
 
     private static String texto(String valor) {

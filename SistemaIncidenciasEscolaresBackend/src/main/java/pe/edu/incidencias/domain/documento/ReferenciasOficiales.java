@@ -22,7 +22,10 @@ public final class ReferenciasOficiales {
     public Map<UUID, List<ReferenciaOficial>> revisiones() { return revisiones; }
     public ReferenciasOficiales registrar(ReferenciaOficial referencia, ContextoAcceso contexto,
                                           DirectorioUsuarios directorio, RestriccionesAmbito restricciones) {
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        return registrar(referencia, contexto, new PoliticaAcceso(directorio, restricciones));
+    }
+    public ReferenciasOficiales registrar(ReferenciaOficial referencia, ContextoAcceso contexto, PoliticaAcceso politica) {
+        politica.exigirRecurso(referencia.id(), referencia.registro().fecha());
         PoliticaAcceso.exigir(politica.evaluar(referencia.registro().autorId(), Permiso.CORREGIR_HECHO, contexto, referencia.registro().fecha()));
         exigirContenido(referencia.ambito(), contexto.ambito());
         var anteriores = revisiones.getOrDefault(referencia.id(), List.of());
@@ -45,11 +48,15 @@ public final class ReferenciasOficiales {
     }
     public List<ReferenciaOficial> consultar(ContextoAcceso contexto, UUID usuario, Instant ahora,
                                             DirectorioUsuarios directorio, RestriccionesAmbito restricciones) {
-        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, restricciones).evaluar(usuario, Permiso.CONSULTAR_HECHO, contexto, ahora));
+        return consultar(contexto, usuario, ahora, new PoliticaAcceso(directorio, restricciones));
+    }
+    public List<ReferenciaOficial> consultar(ContextoAcceso contexto, UUID usuario, Instant ahora, PoliticaAcceso politica) {
+        PoliticaAcceso.exigir(politica.evaluar(usuario, Permiso.CONSULTAR_HECHO, contexto, ahora));
         var resultado = revisiones.values().stream().map(List::getLast)
                 .filter(r -> r.ambito().seCruzaCon(contexto.ambito())).sorted(java.util.Comparator.comparing(ReferenciaOficial::id)).toList();
         if (resultado.stream().anyMatch(r -> r.registro().fecha().isAfter(ahora))) throw new IllegalArgumentException("La referencia contiene una revisión futura");
         resultado.forEach(r -> exigirContenido(r.ambito(), contexto.ambito()));
+        resultado.forEach(r -> politica.exigirRecurso(r.id(), ahora));
         return resultado;
     }
     static void exigirContenido(AmbitoReserva menor, AmbitoReserva mayor) {

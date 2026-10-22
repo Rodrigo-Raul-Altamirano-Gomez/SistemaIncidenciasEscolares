@@ -39,7 +39,16 @@ public final class Hecho {
             var base = aportes.getFirst().participacion().persona();
             var cuenta = aportes.stream().flatMap(a -> a.participacion().persona().usuarioId().stream()).findFirst();
             var relacion = aportes.stream().flatMap(a -> a.participacion().persona().funcionORelacion().stream()).findFirst();
-            return new PersonaInvolucrada(base.id(), base.tipo(), base.descripcion(), cuenta, relacion);
+            return new PersonaInvolucrada(base.id(), base.tipo(), base.descripcion(), cuenta, relacion,
+                    datoUnico(PersonaInvolucrada::contacto), datoUnico(PersonaInvolucrada::documento));
+        }
+        private <T> Optional<T> datoUnico(Function<PersonaInvolucrada, Optional<T>> campo) {
+            var valores = aportes.stream().map(a -> a.participacion().persona()).flatMap(p -> campo.apply(p).stream()).distinct().toList();
+            return valores.size() == 1 ? Optional.of(valores.getFirst()) : Optional.empty();
+        }
+        public boolean datosPersonalesDiscrepantes() {
+            return aportes.stream().flatMap(a -> a.participacion().persona().contacto().stream()).distinct().count() > 1
+                    || aportes.stream().flatMap(a -> a.participacion().persona().documento().stream()).distinct().count() > 1;
         }
     }
 

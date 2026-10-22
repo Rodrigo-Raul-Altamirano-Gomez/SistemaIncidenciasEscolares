@@ -17,10 +17,11 @@ public final class RegistroActas {
     public RegistroActas registrar(ActaAdjunta acta, RegistroAtenciones atenciones, DirectorioUsuarios directorio,
                                    Optional<String> motivoSustitucionDirector) {
         var registro = acta.vigente().registro();
+        exigirRecursos(acta, atenciones, registro.fecha());
         atenciones.consultarCaso(acta.casoId(), registro.autorId(), directorio, registro.fecha());
         var contexto = atenciones.contexto(acta.casoId());
         if (motivoSustitucionDirector.isPresent()) contexto = contexto.conMotivoSustitucion(motivoSustitucionDirector.get());
-        var decision = new PoliticaAcceso(directorio, atenciones.restricciones()).evaluar(registro.autorId(),
+        var decision = new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion()).evaluar(registro.autorId(),
                 Permiso.REGISTRAR_ACTO_COMITE, contexto, registro.fecha());
         PoliticaAcceso.exigir(decision);
         var anterior = actas.get(acta.id());
@@ -40,10 +41,11 @@ public final class RegistroActas {
     public List<ActaAdjunta> consultar(UUID casoId, UUID usuario, Instant ahora, RegistroAtenciones atenciones,
                                       DirectorioUsuarios directorio) {
         atenciones.consultarCaso(casoId, usuario, directorio, ahora);
-        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones()).evaluar(usuario,
+        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion()).evaluar(usuario,
                 Permiso.CONSULTAR_DOCUMENTO_RESERVADO, atenciones.contexto(casoId), ahora));
         var resultado = actas.values().stream().filter(a -> a.casoId().equals(casoId)).sorted(java.util.Comparator.comparing(ActaAdjunta::id)).toList();
-        for (var acta : resultado) PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones()).evaluar(usuario,
+        resultado.forEach(a -> exigirRecursos(a, atenciones, ahora));
+        for (var acta : resultado) PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion()).evaluar(usuario,
                 Permiso.CONSULTAR_DOCUMENTO_RESERVADO, atenciones.contextoDocumento(casoId,
                         acta.vigente().ambitoIncorporacion().orElseThrow()), ahora));
         if (resultado.stream().anyMatch(a -> a.vigente().registro().fecha().isAfter(ahora))) throw new IllegalArgumentException("El acta contiene una revisión futura");
@@ -55,5 +57,10 @@ public final class RegistroActas {
         consultar(acta.casoId(), usuario, ahora, actuales, directorio);
         if (!acta.vigente().archivo().id().equals(archivoSolicitadoId)) throw new SecurityException("El archivo fue sustituido y no es la descarga vigente");
         return acta.vigente().archivo();
+    }
+    private static void exigirRecursos(ActaAdjunta acta, RegistroAtenciones atenciones, Instant ahora) {
+        if (!atenciones.proteccion().permiteRecurso(acta.id(), ahora)
+                || acta.revisiones().stream().anyMatch(r -> !atenciones.proteccion().permiteRecurso(r.archivo().id(), ahora)))
+            throw new SecurityException("El acta o una versión de su archivo tiene bloqueo jurídico");
     }
 }

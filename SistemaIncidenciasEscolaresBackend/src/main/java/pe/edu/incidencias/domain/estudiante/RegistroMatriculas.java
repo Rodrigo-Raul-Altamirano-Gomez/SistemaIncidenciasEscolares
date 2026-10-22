@@ -102,19 +102,23 @@ public final class RegistroMatriculas {
             if (!anterior.cambio().autorId().equals(autorId))
                 throw new SecurityException("El resultado corresponde al lote de otro operador");
             exigirMismoLote(lote, anterior);
+            anterior.filas().stream().filter(ResultadoFila::aceptable).forEach(f ->
+                    politica.exigirPersonaDisponible(f.estudianteId().orElseThrow(), fecha));
             return new Previsualizacion(this, lote, autorId, fecha, anterior.filas(), Map.of());
         }
         var resultados = new ArrayList<ResultadoFila>();
         var propuestas = new HashMap<Integer, Estudiante>();
         for (var fila : lote.filas()) {
-            if (!excluida(lote, fila) && documentoRepetido(lote, fila)) {
+            if (!excluida(lote, fila) && identidadNoDisponible(lote, fila, politica, fecha)) {
+                resultados.add(error(fila.numero(), "La identidad requiere resolución institucional antes de importar"));
+            } else if (!excluida(lote, fila) && documentoRepetido(lote, fila)) {
                 resultados.add(error(fila.numero(), "Documento repetido en el lote; corrija o excluya las filas en conflicto"));
             } else if (!excluida(lote, fila) && !lote.resoluciones().containsKey(fila.numero())
                     && nombreAmbiguoEnLote(lote, fila)) {
                 resultados.add(new ResultadoFila(fila.numero(), Estado.REQUIERE_CONCILIACION, Optional.empty(),
                         List.of(), Set.of(), List.of("Nombre repetido sin documento en el lote; confirme identidades distintas o excluya")));
             } else {
-                resultados.add(preparar(lote, fila, propuestas));
+                resultados.add(reservarCandidatos(preparar(lote, fila, propuestas), politica, fecha));
             }
         }
 
@@ -163,9 +167,12 @@ public final class RegistroMatriculas {
         var anterior = confirmaciones.get(propuesta.lote.id());
         if (anterior != null) {
             exigirMismoLote(propuesta.lote, anterior);
+            anterior.filas().stream().filter(ResultadoFila::aceptable).forEach(f ->
+                    politica.exigirPersonaDisponible(f.estudianteId().orElseThrow(), cambio.fecha()));
             return this;
         }
         if (propuesta.base != this) throw new IllegalArgumentException("La previsualización está obsoleta; vuelva a validar");
+        propuesta.incorporaciones.keySet().forEach(id -> politica.exigirPersonaDisponible(id, cambio.fecha()));
         var nuevos = new HashMap<>(estudiantes);
         nuevos.putAll(propuesta.incorporaciones);
         // La historia no guarda candidatos (ni sus documentos/nombres) de las filas descartadas.
@@ -201,9 +208,12 @@ public final class RegistroMatriculas {
         try {
             var avisos = new ArrayList<String>();
             var anterior = existente.orElseGet(() -> Estudiante.crear(fila.identidadParaAlta(), fila.nombreCompleto()));
-            var actualizado = anterior.incorporarIdentidad(Optional.of(fila.nombreCompleto()), fila.documento(), fila.nacimiento(), fila.sexo());
+            var rectificacion = lote.rectificaciones().get(fila.numero());
+            var base = rectificacion == null ? anterior : anterior.rectificar(lote.anio(), lote.fechaEfectiva(), fila, rectificacion);
+            var actualizado = base.incorporarIdentidad(Optional.of(fila.nombreCompleto()), fila.documento(), fila.nacimiento(), fila.sexo());
             var grupo = fila.grupo();
-            if (grupo.isEmpty() && lote.grupoComun().isPresent()) {
+            if (grupo.isEmpty() && lote.grupoComun().isPresent()
+                    && (rectificacion == null || !rectificacion.borrar().contains(RectificacionMatricula.Campo.GRUPO))) {
                 if (anterior.grupoEn(lote.anio(), lote.fechaEfectiva()).isEmpty()) grupo = lote.grupoComun();
                 else avisos.add("El grupo común no sustituye el grupo conocido; se conserva este último");
             }
@@ -248,6 +258,28 @@ public final class RegistroMatriculas {
         return resolucion != null && resolucion.accion() == LoteMatricula.Accion.EXCLUIR;
     }
 
+    private boolean identidadNoDisponible(LoteMatricula lote, FilaMatricula fila, PoliticaAcceso politica, Instant fecha) {
+        var resolucion = lote.resoluciones().get(fila.numero());
+        if (!politica.puedeConsultarPersona(fila.identidadParaAlta(), fecha)
+                || resolucion != null && resolucion.estudianteId().filter(id -> !politica.puedeConsultarPersona(id, fecha)).isPresent())
+            return true;
+        var porDocumento = estudiantes.values().stream().filter(e -> fila.documento().isPresent()
+                && fila.documento().equals(e.documento())).toList();
+        if (!porDocumento.isEmpty()) return porDocumento.stream().anyMatch(e -> !politica.puedeConsultarPersona(e.id(), fecha));
+        // Un documento diferente distingue al homónimo. Sin documento en cualquiera de las partes,
+        // no se puede eludir la resolución institucional creando otra identidad para el dato bloqueado.
+        return estudiantes.values().stream().filter(e -> (fila.documento().isEmpty() || e.documento().isEmpty())
+                        && BusquedaEstudiantes.normalizar(fila.nombreCompleto()).equals(BusquedaEstudiantes.normalizar(e.nombreCompleto())))
+                .anyMatch(e -> !politica.puedeConsultarPersona(e.id(), fecha));
+    }
+
+    private static ResultadoFila reservarCandidatos(ResultadoFila resultado, PoliticaAcceso politica, Instant fecha) {
+        var visibles = resultado.candidatos().stream().filter(c -> politica.puedeConsultarPersona(c.id(), fecha)).toList();
+        if (visibles.size() == resultado.candidatos().size()) return resultado;
+        return new ResultadoFila(resultado.fila(), resultado.estado(), resultado.estudianteId(), visibles,
+                resultado.cambios(), List.of("Existen coincidencias reservadas; confirme una identidad distinta con información institucional o excluya"));
+    }
+
     private static boolean documentoRepetido(LoteMatricula lote, FilaMatricula fila) {
         return fila.documento().isPresent() && lote.filas().stream().anyMatch(otra -> otra.numero() != fila.numero()
                 && !excluida(lote, otra) && otra.documento().equals(fila.documento()));
@@ -275,7 +307,7 @@ public final class RegistroMatriculas {
     }
 
     /** Huella de campos tipados, no del archivo. Prefijos de longitud y presencia evitan concatenaciones ambiguas. */
-    private static String huella(LoteMatricula lote) {
+    static String huella(LoteMatricula lote) {
         try {
             var digest = MessageDigest.getInstance("SHA-256");
             agregar(digest, List.of(lote.id().toString(), lote.procedencia(), lote.hoja(), Integer.toString(lote.anio()),
@@ -293,6 +325,9 @@ public final class RegistroMatriculas {
                 var resolucion = Optional.ofNullable(lote.resoluciones().get(fila.numero()));
                 agregarOpcional(digest, resolucion.map(r -> r.accion().name()));
                 agregarOpcional(digest, resolucion.flatMap(LoteMatricula.Resolucion::estudianteId).map(UUID::toString));
+                var rectificacion = Optional.ofNullable(lote.rectificaciones().get(fila.numero()));
+                agregarOpcional(digest, rectificacion.map(r -> r.borrar().stream().map(Enum::name).sorted()
+                        .collect(java.util.stream.Collectors.joining(",")) + ":" + r.sustituirGrupo()));
             }
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException error) {

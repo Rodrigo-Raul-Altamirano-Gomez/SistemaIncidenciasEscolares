@@ -31,7 +31,7 @@ public final class BandejaAtencion {
     public static List<EntradaBandeja> proyectar(UUID usuarioId, RegistroAtenciones atenciones,
                                                  RegistroAlertas alertas, DirectorioUsuarios directorio,
                                                  Map<UUID, ContextoAcceso> suplementarios, Instant ahora) {
-        var politica = new PoliticaAcceso(directorio, atenciones.restricciones());
+        var politica = new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion());
         var contextos = new LinkedHashMap<UUID, ContextoAcceso>();
         for (var alerta : alertas.alertas()) if (alerta.pendiente()) {
             var actual = atenciones.contextoDeHechos(alerta.hechosHistoricos());

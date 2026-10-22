@@ -10,11 +10,21 @@ import java.util.UUID;
 /** Revisión de la salida completa; el mapa contiene solo los fragmentos que necesitan adecuación. */
 public record RevisionSalida(UUID casoId, Set<UUID> personasAdmitidas, Set<UUID> referenciasAdmitidas,
                               Map<String, String> textosRevisados, Map<String, String> contextoSeleccionado,
-                              String baseComunicacion, String evaluacionRiesgo, RegistroCambio revision) {
+                              String baseComunicacion, String evaluacionRiesgo, RegistroCambio revision,
+                              Set<UUID> contactosAdmitidos, Set<UUID> documentosExternosAdmitidos) {
+    public RevisionSalida(UUID casoId, Set<UUID> personasAdmitidas, Set<UUID> referenciasAdmitidas,
+                           Map<String, String> textosRevisados, Map<String, String> contextoSeleccionado,
+                           String baseComunicacion, String evaluacionRiesgo, RegistroCambio revision) {
+        this(casoId, personasAdmitidas, referenciasAdmitidas, textosRevisados, contextoSeleccionado,
+                baseComunicacion, evaluacionRiesgo, revision, Set.of(), Set.of());
+    }
     public RevisionSalida {
         Objects.requireNonNull(casoId);
         personasAdmitidas = Set.copyOf(personasAdmitidas);
         referenciasAdmitidas = Set.copyOf(referenciasAdmitidas);
+        contactosAdmitidos = Set.copyOf(contactosAdmitidos); documentosExternosAdmitidos = Set.copyOf(documentosExternosAdmitidos);
+        if (!personasAdmitidas.containsAll(contactosAdmitidos) || !personasAdmitidas.containsAll(documentosExternosAdmitidos))
+            throw new IllegalArgumentException("Los datos externos seleccionados requieren admitir a la persona");
         textosRevisados = Map.copyOf(textosRevisados);
         contextoSeleccionado = Map.copyOf(contextoSeleccionado);
         Objects.requireNonNull(revision);

@@ -56,7 +56,8 @@ public final class GeneradorInformeCaso {
         var hechos = atenciones.hechosDelCaso(casoId, usuario, directorio, ahora);
         var acciones = atenciones.actuacionesDelCaso(casoId, usuario, directorio, ahora);
         var documentos = actas.consultar(casoId, usuario, ahora, atenciones, directorio);
-        var referenciasCaso = referencias.consultar(atenciones.contexto(casoId), usuario, ahora, directorio, atenciones.restricciones());
+        var referenciasCaso = referencias.consultar(atenciones.contexto(casoId), usuario, ahora,
+                new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion()));
         exigirCorte(caso.ultimaModificacion(), corte);
         atenciones.contexto(casoId).ambito().casosIds().forEach(id ->
                 atenciones.caso(id).ifPresent(relacionado -> exigirCorte(relacionado.ultimaModificacion(), corte)));
@@ -98,6 +99,7 @@ public final class GeneradorInformeCaso {
     /** Identifica y conserva la instantánea ya preparada; emitir no envía, firma ni registra en un instrumento externo. */
     public InformeCaso emitir(InformeCaso vista, UUID informeId, RegistroCambio emision) {
         Objects.requireNonNull(vista);
+        if (!atenciones.proteccion().permiteRecurso(informeId, emision.fecha())) throw new SecurityException("Informe bloqueado");
         atenciones.consultarCaso(vista.casoId(), emision.autorId(), directorio, emision.fecha());
         autorizarInstantanea(vista, emision.autorId(), emision.fecha());
         autorizar(vista.casoId(), emision.autorId(), Permiso.GENERAR_INFORME, emision.fecha());
@@ -113,6 +115,7 @@ public final class GeneradorInformeCaso {
     /** La autorización usa el ámbito actual y toda su historia; el contenido emitido conserva su corte original. */
     public InformeCaso consultarEmitido(InformeCaso informe, UUID usuario, Instant ahora) {
         if (!informe.emitido()) throw new IllegalArgumentException("Una previsualización no es un informe emitido");
+        if (!atenciones.proteccion().permiteRecurso(informe.id().orElseThrow(), ahora)) throw new SecurityException("Informe bloqueado");
         if (informe.emision().orElseThrow().fecha().isAfter(ahora)) throw new IllegalArgumentException("La emisión no puede ser futura");
         atenciones.consultarCaso(informe.casoId(), usuario, directorio, ahora);
         autorizarInstantanea(informe, usuario, ahora);
@@ -125,12 +128,12 @@ public final class GeneradorInformeCaso {
         var ids = informe.hechos().stream().map(HechoInforme::id).collect(Collectors.toSet());
         var reportes = informe.hechos().stream().flatMap(h -> h.reportes().stream()).map(ReporteInforme::id).collect(Collectors.toSet());
         var contexto = atenciones.contextoDocumento(informe.casoId(), new AmbitoReserva(ids, reportes, java.util.Set.of(informe.casoId())));
-        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones())
+        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion())
                 .evaluar(usuario, Permiso.CONSULTAR_DOCUMENTO_RESERVADO, contexto, ahora));
     }
 
     private void autorizar(UUID caso, UUID usuario, Permiso permiso, Instant ahora) {
-        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones())
+        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion())
                 .evaluar(usuario, permiso, atenciones.contexto(caso), ahora));
     }
     private static void exigirCorte(Instant cambio, Instant corte) {
@@ -151,6 +154,12 @@ public final class GeneradorInformeCaso {
         private String texto(String clave, String original) {
             String resultado = revision.map(r -> r.texto(clave, original)).orElse(original);
             if (externo()) for (var persona : personas) {
+                boolean contactoOmitido = !revision.orElseThrow().contactosAdmitidos().contains(persona.id());
+                boolean documentoOmitido = persona.tipo() != TipoPersona.ESTUDIANTE
+                        && !revision.orElseThrow().documentosExternosAdmitidos().contains(persona.id());
+                if (contactoOmitido && persona.contacto().filter(resultado::contains).isPresent()
+                        || documentoOmitido && persona.documento().map(DocumentoIdentidad::numero).filter(resultado::contains).isPresent())
+                    throw new IllegalArgumentException("Debe adecuarse el fragmento con datos de contacto/documento no seleccionados: " + clave);
                 boolean protegida = !incluir(persona) || violencia && persona.tipo() == TipoPersona.ESTUDIANTE;
                 if (!protegida) continue;
                 var nombres = new java.util.HashSet<String>();
@@ -166,8 +175,13 @@ public final class GeneradorInformeCaso {
             return texto("autor:" + id, directorio.usuario(id).map(Usuario::nombreLaboral).orElse("Referencia institucional " + id));
         }
         private Optional<DocumentoIdentidad> documento(PersonaInvolucrada persona) {
+            if (persona.tipo() != TipoPersona.ESTUDIANTE) return !externo()
+                    || revision.orElseThrow().documentosExternosAdmitidos().contains(persona.id()) ? persona.documento() : Optional.empty();
             var documento = Optional.ofNullable(estudiantes.get(persona.id())).flatMap(Estudiante::documento);
             return externo() && violencia ? documento.filter(d -> d.tipo().equals("DNI")) : documento;
+        }
+        private Optional<String> contacto(PersonaInvolucrada persona) {
+            return !externo() || revision.orElseThrow().contactosAdmitidos().contains(persona.id()) ? persona.contacto() : Optional.empty();
         }
         private String identidad(PersonaInvolucrada persona) {
             if (!externo() || !violencia) return Optional.ofNullable(estudiantes.get(persona.id())).map(Estudiante::nombreCompleto).orElse(persona.descripcion());
@@ -184,7 +198,8 @@ public final class GeneradorInformeCaso {
         private HechoInforme hecho(Hecho hecho) {
             var personas = hecho.participaciones().stream().filter(p -> incluir(p.persona())).map(p -> new ParticipanteInforme(
                     p.personaId(), p.persona().tipo(), identidad(p.persona()), documento(p.persona()), p.aportes().stream()
-                    .map(a -> new PapelFuente(a.reporteId(), a.participacion().papel())).toList(), p.papelVigente(), p.discrepancia())).toList();
+                    .map(a -> new PapelFuente(a.reporteId(), a.participacion().papel())).toList(), p.papelVigente(),
+                    p.discrepancia() || p.datosPersonalesDiscrepantes(), contacto(p.persona()))).toList();
             var precisiones = new ArrayList<PrecisionInforme>();
             for (int i = 0; i < hecho.precisiones().size(); i++) {
                 var p = hecho.precisiones().get(i);
@@ -213,7 +228,8 @@ public final class GeneradorInformeCaso {
                 versiones.add(new VersionReporteInforme(v.cambio().fecha(), externo() ? Optional.empty() : Optional.of(v.cambio().autorId()),
                         v.datos().fechaHecho(), v.datos().clasificacion(), texto("reporte:" + reporte.id() + ":version:" + i, v.datos().descripcion()),
                         v.datos().participaciones().stream().filter(p -> incluir(p.persona())).map(p ->
-                                new PersonaFuenteInforme(p.persona().id(), identidad(p.persona()), p.papel())).toList()));
+                                new PersonaFuenteInforme(p.persona().id(), identidad(p.persona()), p.papel(),
+                                        contacto(p.persona()), documento(p.persona()))).toList()));
             }
             var aclaraciones = new ArrayList<String>();
             for (int i = 0; i < reporte.aclaraciones().size(); i++)

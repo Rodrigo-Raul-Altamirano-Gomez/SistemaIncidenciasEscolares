@@ -4,6 +4,7 @@ import pe.edu.incidencias.domain.acceso.*;
 import pe.edu.incidencias.domain.incidencia.Hecho;
 import pe.edu.incidencias.domain.incidencia.RegistroCambio;
 import pe.edu.incidencias.domain.incidencia.ReporteIncidencia;
+import pe.edu.incidencias.domain.proteccion.ControlProteccion;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -42,6 +43,7 @@ public final class RegistroAtenciones {
     private final RestriccionesAmbito restricciones;
     private final List<Duplicidad> duplicidades;
     private final Indice indice;
+    private final ControlProteccion proteccion;
 
     private RegistroAtenciones(Map<UUID, Hecho> hechos, Map<UUID, CasoAtencion> casos,
                                Map<UUID, List<Actuacion>> inmediatas, RestriccionesAmbito restricciones) {
@@ -55,6 +57,12 @@ public final class RegistroAtenciones {
     private RegistroAtenciones(Map<UUID, Hecho> hechos, Map<UUID, CasoAtencion> casos,
                                Map<UUID, List<Actuacion>> inmediatas, RestriccionesAmbito restricciones,
                                List<Duplicidad> duplicidades, Indice indiceAnterior) {
+        this(hechos, casos, inmediatas, restricciones, duplicidades, indiceAnterior, ControlProteccion.vacio());
+    }
+    private RegistroAtenciones(Map<UUID, Hecho> hechos, Map<UUID, CasoAtencion> casos,
+                               Map<UUID, List<Actuacion>> inmediatas, RestriccionesAmbito restricciones,
+                               List<Duplicidad> duplicidades, Indice indiceAnterior, ControlProteccion proteccion) {
+        this.proteccion = Objects.requireNonNull(proteccion);
         this.hechos = Map.copyOf(hechos);
         this.casos = Map.copyOf(casos);
         var acciones = new LinkedHashMap<UUID, List<Actuacion>>();
@@ -84,7 +92,7 @@ public final class RegistroAtenciones {
 
     private RegistroAtenciones copiarEstado(Map<UUID, Hecho> hechos, Map<UUID, CasoAtencion> casos,
                                              Map<UUID, List<Actuacion>> inmediatas, RestriccionesAmbito restricciones) {
-        return new RegistroAtenciones(hechos, casos, inmediatas, restricciones, duplicidades, indice);
+        return new RegistroAtenciones(hechos, casos, inmediatas, restricciones, duplicidades, indice, proteccion);
     }
 
     /** Estructura interna de fuentes e historia; no es una vista autorizada. */
@@ -120,6 +128,9 @@ public final class RegistroAtenciones {
         }
         return new RegistroAtenciones(porId, Map.of(), Map.of(), restricciones);
     }
+    public static RegistroAtenciones iniciar(Collection<Hecho> hechos, RestriccionesAmbito restricciones, ControlProteccion proteccion) {
+        return iniciar(hechos, restricciones).conProteccion(proteccion);
+    }
 
     /** Reconstituye solo el contenido necesario más su índice de reserva/unicidad, desde una instantánea consistente. */
     public static RegistroAtenciones cargarAmbito(Collection<Hecho> hechos, Collection<CasoAtencion> casos,
@@ -137,17 +148,51 @@ public final class RegistroAtenciones {
         registro.validarPendientes(porId, inmediatas);
         return registro;
     }
+    public static RegistroAtenciones cargarAmbito(Collection<Hecho> hechos, Collection<CasoAtencion> casos,
+                                                   Map<UUID, List<Actuacion>> inmediatas, RestriccionesAmbito restricciones,
+                                                   List<Duplicidad> duplicidades, Indice indice, ControlProteccion proteccion) {
+        return cargarAmbito(hechos, casos, inmediatas, restricciones, duplicidades, indice).conProteccion(proteccion);
+    }
 
     public List<CasoAtencion> casos() { return casos.values().stream().sorted(java.util.Comparator.comparing(c -> c.id().toString())).toList(); }
     public Optional<CasoAtencion> caso(UUID id) { return Optional.ofNullable(casos.get(id)); }
     public RestriccionesAmbito restricciones() { return restricciones; }
+    public ControlProteccion proteccion() {
+        var recursos = new LinkedHashMap<UUID, AmbitoReserva>();
+        var personas = new LinkedHashMap<UUID, AmbitoReserva>();
+        for (var caso : casos()) {
+            var ambito = contexto(caso.id()).ambito();
+            caso.derivaciones().forEach(d -> recursos.merge(d.id(), ambito, AmbitoReserva::unir));
+            for (var accion : caso.actuaciones()) relacionarProteccion(accion, ambito, recursos, personas);
+        }
+        inmediatas.forEach((reporte, acciones) -> {
+            var ambito = contextoDeHechos(Set.of(hechoDeReporte(reporte).id())).ambito();
+            acciones.forEach(a -> relacionarProteccion(a, ambito, recursos, personas));
+        });
+        return proteccion.conRelaciones(recursos, personas);
+    }
+    private static void relacionarProteccion(Actuacion accion, AmbitoReserva ambito,
+                                             Map<UUID, AmbitoReserva> recursos, Map<UUID, AmbitoReserva> personas) {
+        recursos.merge(accion.id(), ambito, AmbitoReserva::unir);
+        accion.personasIds().forEach(id -> personas.merge(id, ambito, AmbitoReserva::unir));
+        for (var compromiso : accion.revisiones().stream().flatMap(r -> r.compromisos().stream()).toList()) {
+            recursos.merge(compromiso.id(), ambito, AmbitoReserva::unir);
+            personas.merge(compromiso.asumidoPor().id(), ambito, AmbitoReserva::unir);
+        }
+    }
+    /** La aplicación debe cargar los controles actuales antes de ofrecer cualquier operación protegida. */
+    public RegistroAtenciones conProteccion(ControlProteccion actual) {
+        return new RegistroAtenciones(hechos, casos, inmediatas, restricciones, duplicidades, indice, actual);
+    }
+    /** Filtro jurídico de una atención y sus recursos embebidos; no concede permiso funcional. */
+    public boolean casoDisponible(UUID casoId, Instant ahora) { return proteccion().permite(contexto(casoId), ahora); }
 
     public RegistroAtenciones incorporarHecho(Hecho hecho, DirectorioUsuarios directorio, RegistroCambio cambio) {
         if (hechos.containsKey(hecho.id())) throw new IllegalArgumentException("El hecho ya está incorporado");
         validarReportesUnicos(hecho);
         var contexto = new ContextoAcceso(new AmbitoReserva(Set.of(hecho.id()), Set.of(),
                 indice.reservasPorHecho().getOrDefault(hecho.id(), Set.of())), List.of(hecho), Optional.empty(), Optional.empty());
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.ATENDER, contexto, cambio.fecha()));
         var nuevos = new LinkedHashMap<>(hechos);
         nuevos.put(hecho.id(), hecho);
@@ -158,7 +203,7 @@ public final class RegistroAtenciones {
     public RegistroAtenciones actualizarHecho(Hecho actualizado, DirectorioUsuarios directorio, RegistroCambio cambio) {
         var anterior = Optional.ofNullable(hechos.get(actualizado.id())).orElseThrow(() -> new IllegalArgumentException("El hecho no existe"));
         var contextoAnterior = contextoDeHecho(anterior.id(), Optional.empty());
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.CORREGIR_HECHO, contextoAnterior, cambio.fecha()));
         if (!continua(anterior.vinculos(), actualizado.vinculos()) || !continua(anterior.precisiones(), actualizado.precisiones())
                 || !continua(anterior.aclaraciones(), actualizado.aclaraciones()) || !continua(anterior.cambiosPrincipal(), actualizado.cambiosPrincipal()))
@@ -176,7 +221,9 @@ public final class RegistroAtenciones {
         nuevos.put(actualizado.id(), actualizado);
         var antes = politica.restriccionesActualizadas(contextoAnterior, cambio.fecha());
         var provisional = copiarEstado(nuevos, casos, inmediatas, antes);
-        var actuales = new PoliticaAcceso(directorio, antes).restriccionesActualizadas(
+        if (!provisional.proteccion().permite(provisional.contextoDeHecho(actualizado.id(), Optional.empty()), cambio.fecha()))
+            throw new SecurityException("El contenido propuesto incorpora datos bloqueados");
+        var actuales = new PoliticaAcceso(directorio, antes, proteccion()).restriccionesActualizadas(
                 provisional.contextoDeHecho(actualizado.id(), Optional.empty()), cambio.fecha());
         return copiarEstado(nuevos, casos, inmediatas, actuales);
     }
@@ -187,12 +234,12 @@ public final class RegistroAtenciones {
     }
     public RegistroAtenciones excluirUsuario(UUID casoId, UUID exclusionId, UUID usuarioId, AmbitoReserva origen,
                                              DirectorioUsuarios directorio, RegistroCambio cambio) {
-        var actuales = new PoliticaAcceso(directorio, restricciones).excluir(exclusionId, usuarioId, contexto(casoId), origen, cambio);
+        var actuales = new PoliticaAcceso(directorio, restricciones, proteccion()).excluir(exclusionId, usuarioId, contexto(casoId), origen, cambio);
         return copiarEstado(hechos, casos, inmediatas, actuales);
     }
 
     public RegistroAtenciones retirarExclusion(UUID casoId, UUID exclusionId, DirectorioUsuarios directorio, RegistroCambio cambio) {
-        var actuales = new PoliticaAcceso(directorio, restricciones).retirarExclusion(exclusionId, contexto(casoId), cambio);
+        var actuales = new PoliticaAcceso(directorio, restricciones, proteccion()).retirarExclusion(exclusionId, contexto(casoId), cambio);
         return copiarEstado(hechos, casos, inmediatas, actuales);
     }
 
@@ -205,7 +252,7 @@ public final class RegistroAtenciones {
         if (hechosIds.stream().anyMatch(id -> hechos.get(id).anulado())) throw new IllegalArgumentException("No se inicia atención sobre un hecho sin reportes válidos");
         var nuevo = CasoAtencion.abrir(casoId, responsableId, fechaInicio, hechosIds, cambio);
         var contexto = contextoCon(nuevo);
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.ATENDER, contexto, cambio.fecha()));
         PoliticaAcceso.exigir(politica.evaluar(responsableId, Permiso.ATENDER, contexto, cambio.fecha()));
         var idsActuaciones = new HashSet<UUID>();
@@ -284,7 +331,7 @@ public final class RegistroAtenciones {
                                               Optional<String> motivoSustitucion, DirectorioUsuarios directorio, RegistroCambio cambio) {
         var caso = requerirCaso(casoId);
         var contexto = conSustitucion(contexto(casoId), motivoSustitucion);
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         var decision = politica.evaluar(cambio.autorId(), Permiso.CONVOCAR_COMITE, contexto, cambio.fecha());
         PoliticaAcceso.exigir(decision);
         var actuales = politica.restriccionesActualizadas(contexto, cambio.fecha());
@@ -401,7 +448,7 @@ public final class RegistroAtenciones {
     public RegistroAtenciones reasignarResponsable(UUID casoId, UUID nuevoResponsable, DirectorioUsuarios directorio, RegistroCambio cambio) {
         var caso = requerirCaso(casoId);
         var contexto = contexto(casoId);
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.ATENDER, contexto, cambio.fecha()));
         PoliticaAcceso.exigir(politica.evaluar(nuevoResponsable, Permiso.ATENDER, contexto, cambio.fecha()));
         return guardar(caso.reasignar(nuevoResponsable, cambio), politica.restriccionesActualizadas(contexto, cambio.fecha()), cambio);
@@ -420,7 +467,7 @@ public final class RegistroAtenciones {
         propuestos.put(origenId, nuevaFuente);
         propuestos.put(destinoId, nuevoDestino);
         var contexto = cerrarAmbito(Set.of(origenId, destinoId), Set.of(), propuestos, Optional.empty());
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.RELACIONAR_REPORTES, contexto, cambio.fecha()));
         var actuales = politica.restriccionesActualizadas(contexto, cambio.fecha());
         propuestos.put(origenId, concluirContinuidadSiCorresponde(nuevaFuente, inmediatas, cambio));
@@ -444,7 +491,7 @@ public final class RegistroAtenciones {
             throw new IllegalArgumentException("Una atención afectada contiene cambios posteriores a la relación");
         var contexto = cerrarAmbito(casosAfectados.stream().map(CasoAtencion::id).collect(java.util.stream.Collectors.toSet()),
                 Set.of(principal.id(), origen.id()), casos, Optional.empty());
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.RELACIONAR_REPORTES, contexto, cambio.fecha()));
         var pendientes = casos().stream().filter(c -> c.estado() == CasoAtencion.Estado.PENDIENTE)
                 .filter(c -> normalizar(c.hechosActuales()).stream().anyMatch(Set.of(principal.id(), origen.id())::contains)).toList();
@@ -480,13 +527,13 @@ public final class RegistroAtenciones {
             propuestos.put(elegido.id(), elegido);
         }
         var provisional = new RegistroAtenciones(fuentes, propuestos, inmediatas,
-                politica.restriccionesActualizadas(contexto, cambio.fecha()), relaciones, indice);
+                politica.restriccionesActualizadas(contexto, cambio.fecha()), relaciones, indice, proteccion);
         for (var caso : List.copyOf(propuestos.values())) propuestos.put(caso.id(), provisional.concluirContinuidadSiCorresponde(caso, inmediatas, cambio));
-        provisional = new RegistroAtenciones(fuentes, propuestos, inmediatas, provisional.restricciones, relaciones, indice);
+        provisional = new RegistroAtenciones(fuentes, propuestos, inmediatas, provisional.restricciones, relaciones, indice, proteccion);
         provisional.validarPendientes(propuestos, inmediatas);
-        var actuales = new PoliticaAcceso(directorio, provisional.restricciones).restriccionesActualizadas(
+        var actuales = new PoliticaAcceso(directorio, provisional.restricciones, provisional.proteccion()).restriccionesActualizadas(
                 provisional.contextoDeHechos(Set.of(principal.id())), cambio.fecha());
-        return new RegistroAtenciones(fuentes, propuestos, inmediatas, actuales, relaciones, indice);
+        return new RegistroAtenciones(fuentes, propuestos, inmediatas, actuales, relaciones, indice, proteccion);
     }
 
     /** Deshace una identificación equivocada; conserva las revisiones recibidas y no reabre atenciones. */
@@ -500,7 +547,7 @@ public final class RegistroAtenciones {
                 || relacion.casoContinuidad().filter(c.id()::equals).isPresent()).map(CasoAtencion::id).collect(java.util.stream.Collectors.toSet());
         var contexto = cerrarAmbito(casosAfectados, Set.of(relacion.principalId()), casos, Optional.empty());
         if (casoDelSeparado.isPresent()) contexto = contextoDocumento(casoDelSeparado.get(), contexto.ambito());
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.RELACIONAR_REPORTES, contexto, cambio.fecha()));
         var principal = hechoVigente(relacion.principalId());
         var fuente = relacion.origen();
@@ -535,17 +582,17 @@ public final class RegistroAtenciones {
             propuestos.put(elegido.id(), elegido);
         }
         var provisional = new RegistroAtenciones(fuentes, propuestos, inmediatas,
-                politica.restriccionesActualizadas(contexto, cambio.fecha()), relaciones, indice);
+                politica.restriccionesActualizadas(contexto, cambio.fecha()), relaciones, indice, proteccion);
         provisional.validarPendientes(propuestos, inmediatas);
-        var actuales = new PoliticaAcceso(directorio, provisional.restricciones).restriccionesActualizadas(
+        var actuales = new PoliticaAcceso(directorio, provisional.restricciones, provisional.proteccion()).restriccionesActualizadas(
                 provisional.contextoDeHechos(Set.of(principal.id(), fuente.id())), cambio.fecha());
-        return new RegistroAtenciones(fuentes, propuestos, inmediatas, actuales, relaciones, indice);
+        return new RegistroAtenciones(fuentes, propuestos, inmediatas, actuales, relaciones, indice, proteccion);
     }
 
     public RegistroAtenciones registrarInmediata(UUID reporteId, Actuacion actuacion, DirectorioUsuarios directorio, RegistroCambio cambio) {
         var hecho = hechoDeReporte(reporteId);
         var contexto = contextoDeHecho(hecho.id(), Optional.of(reporteId));
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACCION_COTIDIANA, contexto, cambio.fecha()));
         if (actuacion.estado() != Actuacion.Estado.REALIZADA) throw new IllegalArgumentException("La acción inmediata ya debe estar realizada");
         if (!actuacion.hechosIds().isEmpty() && !actuacion.hechosIds().equals(Set.of(hecho.id())))
@@ -563,7 +610,7 @@ public final class RegistroAtenciones {
                 .filter(a -> !a.id().equals(actualizada.id())).flatMap(a -> a.compromisos().stream())
                 .anyMatch(c -> compromisos.contains(c.id()))) throw new IllegalArgumentException("Un compromiso no se copia a otra actuación");
         var contexto = contextoDeHecho(hechoDeReporte(reporteId).id(), Optional.of(reporteId));
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         var permisoPropio = politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACCION_COTIDIANA, contexto, cambio.fecha());
         if (!permisoPropio.permitida()) PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.ATENDER, contexto, cambio.fecha()));
         return guardarInmediata(reporteId, actualizada, politica.restriccionesActualizadas(contexto, cambio.fecha()), cambio);
@@ -571,18 +618,34 @@ public final class RegistroAtenciones {
 
     public CasoAtencion consultarCaso(UUID casoId, UUID usuarioId, DirectorioUsuarios directorio, Instant ahora) {
         if (requerirCaso(casoId).ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("El caso contiene cambios posteriores al instante de consulta");
-        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, restricciones).evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto(casoId), ahora));
+        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, restricciones, proteccion()).evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto(casoId), ahora));
         return requerirCaso(casoId);
     }
 
     /** Referencias a acciones inmediatas y propias: una acción conserva un único ID y una sola ocurrencia. */
     public List<Actuacion> actuacionesDelCaso(UUID casoId, UUID usuarioId, DirectorioUsuarios directorio, Instant ahora) {
-        var caso = consultarCaso(casoId, usuarioId, directorio, ahora);
+        return actuacionesDelCaso(casoId, usuarioId, new PoliticaAcceso(directorio, restricciones, proteccion()), ahora);
+    }
+    public List<Actuacion> actuacionesDelCaso(UUID casoId, UUID usuarioId, PoliticaAcceso politicaActual, Instant ahora) {
+        var caso = requerirCaso(casoId);
+        if (caso.ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("El caso contiene cambios futuros");
+        PoliticaAcceso.exigir(politicaActual.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto(casoId), ahora));
+        if (!proteccion().permite(contexto(casoId), ahora)) throw new SecurityException("Ámbito con bloqueo jurídico");
         var resultado = new LinkedHashMap<UUID, Actuacion>();
         caso.actuaciones().forEach(a -> resultado.put(a.id(), a));
         for (var hechoId : caso.hechosReservados()) for (var reporte : hechoVigente(hechoId).reportes())
             inmediatas.getOrDefault(reporte.id(), List.of()).forEach(a -> resultado.put(a.id(), a));
         return resultado.values().stream().sorted(java.util.Comparator.comparing(a -> a.id().toString())).toList();
+    }
+
+    public List<Actuacion> inmediatasDelHecho(UUID hechoId, UUID usuarioId, PoliticaAcceso politicaActual, Instant ahora) {
+        PoliticaAcceso.exigir(politicaActual.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contextoDeHechos(Set.of(hechoId)), ahora));
+        if (!proteccion().permite(contextoDeHechos(Set.of(hechoId)), ahora)) throw new SecurityException("Ámbito con bloqueo jurídico");
+        var resultado = hechoVigente(hechoId).reportes().stream().flatMap(r -> inmediatas.getOrDefault(r.id(), List.of()).stream())
+                .distinct().sorted(java.util.Comparator.comparing(Actuacion::id)).toList();
+        if (resultado.stream().anyMatch(a -> a.ultimaModificacion().isAfter(ahora)))
+            throw new IllegalArgumentException("La actuación contiene cambios futuros");
+        return resultado;
     }
 
     public List<Hecho> hechosDelCaso(UUID casoId, UUID usuarioId, DirectorioUsuarios directorio, Instant ahora) {
@@ -591,7 +654,7 @@ public final class RegistroAtenciones {
     }
 
     public List<CasoAtencion> conTrabajoPendiente(UUID usuarioId, DirectorioUsuarios directorio, Instant ahora) {
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         return casos().stream().filter(c -> c.requiereTrabajo() || tieneInmediatasPendientes(c))
                 .filter(c -> politica.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto(c.id()), ahora).permitida()).toList();
     }
@@ -653,7 +716,7 @@ public final class RegistroAtenciones {
 
     private RestriccionesAmbito autorizar(CasoAtencion candidato, Permiso permiso, DirectorioUsuarios directorio, RegistroCambio cambio) {
         var contexto = contextoCon(candidato);
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), permiso, contexto, cambio.fecha()));
         return politica.restriccionesActualizadas(contexto, cambio.fecha());
     }
@@ -663,7 +726,7 @@ public final class RegistroAtenciones {
         if (requerirCaso(casoId).encargado() != EncargadoAtencion.COMITE)
             throw new IllegalStateException("El comité debe haber sido convocado expresamente en este caso");
         var contexto = conSustitucion(contexto(casoId), motivoSustitucion);
-        var politica = new PoliticaAcceso(directorio, restricciones);
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
         var decision = politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACTO_COMITE, contexto, cambio.fecha());
         PoliticaAcceso.exigir(decision);
         return new AutorizacionFormal(decision, politica.restriccionesActualizadas(contexto, cambio.fecha()));
@@ -693,7 +756,9 @@ public final class RegistroAtenciones {
                 hecho = hecho.actualizarReporte(reporte.marcarAtencionInstitucional(cambio));
             fuentes.put(hechoId, hecho);
         }
-        return copiarEstado(fuentes, nuevos, inmediatas, actuales);
+        var resultado = copiarEstado(fuentes, nuevos, inmediatas, actuales);
+        if (!resultado.casoDisponible(candidato.id(), cambio.fecha())) throw new SecurityException("El contenido propuesto incorpora datos bloqueados");
+        return resultado;
     }
     private RegistroAtenciones guardarInmediata(UUID reporteId, Actuacion actuacion, RestriccionesAmbito actuales, RegistroCambio cambio) {
         if (actuacion.ultimaModificacion().isAfter(cambio.fecha())) throw new IllegalArgumentException("La acción es posterior al guardado");
@@ -705,7 +770,10 @@ public final class RegistroAtenciones {
         var nuevos = new LinkedHashMap<>(casos);
         casos.forEach((id, caso) -> nuevos.put(id, concluirContinuidadSiCorresponde(caso, acciones, cambio)));
         validarPendientes(nuevos, acciones);
-        return copiarEstado(hechos, nuevos, acciones, actuales);
+        var resultado = copiarEstado(hechos, nuevos, acciones, actuales);
+        if (!resultado.proteccion().permite(resultado.contextoDeHechos(Set.of(hechoDeReporte(reporteId).id())), cambio.fecha()))
+            throw new SecurityException("La acción propuesta incorpora datos bloqueados");
+        return resultado;
     }
     private CasoAtencion concluirContinuidadSiCorresponde(CasoAtencion caso, Map<UUID, List<Actuacion>> acciones, RegistroCambio cambio) {
         if (caso.estado() != CasoAtencion.Estado.PENDIENTE || !caso.hechosActuales().isEmpty()

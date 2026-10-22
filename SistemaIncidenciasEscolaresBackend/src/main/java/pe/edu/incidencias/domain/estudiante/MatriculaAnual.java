@@ -81,6 +81,14 @@ public final class MatriculaAnual {
                 ? this : new MatriculaAnual(anio, situacion, historialGrupos);
     }
 
+    /** Solo desde un borrado/rectificación revisado: no altera grupos efectivos posteriores. */
+    MatriculaAnual rectificar(LocalDate fecha, Optional<GrupoEscolar> grupo, boolean cambiarGrupo, boolean borrarSituacion) {
+        validarFecha(anio, fecha);
+        var historial = new TreeMap<>(historialGrupos);
+        if (cambiarGrupo) historial.put(fecha, grupo);
+        return new MatriculaAnual(anio, borrarSituacion ? Optional.empty() : situacionInformada, historial);
+    }
+
     private static void validarFecha(int anio, LocalDate fecha) {
         Objects.requireNonNull(fecha, "fecha");
         if (fecha.getYear() != anio) {

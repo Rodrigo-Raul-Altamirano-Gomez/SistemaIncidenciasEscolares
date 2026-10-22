@@ -95,6 +95,30 @@ public final class Estudiante {
         return Optional.ofNullable(matriculas.get(anio));
     }
 
+    /** No es editor libre: solo el registro de lotes aplica solicitudes revisadas y trazadas. */
+    Estudiante rectificar(int anio, LocalDate fecha, FilaMatricula fila, RectificacionMatricula solicitud) {
+        var borrar = solicitud.borrar();
+        if (borrar.contains(RectificacionMatricula.Campo.DOCUMENTO) && fila.documento().isPresent()
+                || borrar.contains(RectificacionMatricula.Campo.NACIMIENTO) && fila.nacimiento().isPresent()
+                || borrar.contains(RectificacionMatricula.Campo.SEXO) && fila.sexo().isPresent()
+                || borrar.contains(RectificacionMatricula.Campo.SITUACION) && fila.situacion().isPresent()
+                || borrar.contains(RectificacionMatricula.Campo.GRUPO) && fila.grupo().isPresent())
+            throw new IllegalArgumentException("Un campo no se borra y aporta a la vez");
+        if (solicitud.sustituirGrupo() && fila.grupo().isEmpty())
+            throw new IllegalArgumentException("La sustitución expresa requiere grupo informado");
+        var nuevas = new HashMap<>(matriculas);
+        if (solicitud.sustituirGrupo() || borrar.contains(RectificacionMatricula.Campo.GRUPO)
+                || borrar.contains(RectificacionMatricula.Campo.SITUACION)) {
+            nuevas.put(anio, matriculaRequerida(anio).rectificar(fecha, fila.grupo(),
+                    solicitud.sustituirGrupo() || borrar.contains(RectificacionMatricula.Campo.GRUPO),
+                    borrar.contains(RectificacionMatricula.Campo.SITUACION)));
+        }
+        return new Estudiante(id, nombreCompleto,
+                borrar.contains(RectificacionMatricula.Campo.DOCUMENTO) ? Optional.empty() : documento,
+                borrar.contains(RectificacionMatricula.Campo.NACIMIENTO) ? Optional.empty() : fechaNacimiento,
+                borrar.contains(RectificacionMatricula.Campo.SEXO) ? Optional.empty() : sexoInformado, nuevas);
+    }
+
     public Optional<GrupoEscolar> grupoEn(int anio, LocalDate fecha) {
         Objects.requireNonNull(fecha, "fecha");
         return matricula(anio).flatMap(matricula -> matricula.grupoEn(fecha));

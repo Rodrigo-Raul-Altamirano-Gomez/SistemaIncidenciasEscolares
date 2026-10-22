@@ -36,12 +36,22 @@ public record InformeCaso(Optional<UUID> id, UUID casoId, DatosInstitucion insti
                                         ClasificacionCategoria clasificacion, String relato, List<PersonaFuenteInforme> personas) {
         public VersionReporteInforme { personas = List.copyOf(personas); }
     }
-    public record PersonaFuenteInforme(UUID referenciaInterna, String identificacion, PapelParticipacion papel) { }
+    public record PersonaFuenteInforme(UUID referenciaInterna, String identificacion, PapelParticipacion papel,
+                                        Optional<String> contacto, Optional<DocumentoIdentidad> documento) {
+        public PersonaFuenteInforme(UUID referenciaInterna, String identificacion, PapelParticipacion papel) {
+            this(referenciaInterna, identificacion, papel, Optional.empty(), Optional.empty());
+        }
+    }
     public record PapelFuente(UUID reporteId, PapelParticipacion papel) { }
     public record ParticipanteInforme(UUID referenciaInterna, TipoPersona tipo, String identificacion,
                                       Optional<DocumentoIdentidad> documento, List<PapelFuente> fuentes,
-                                      Optional<PapelParticipacion> papelVigente, boolean discrepancia) {
+                                      Optional<PapelParticipacion> papelVigente, boolean discrepancia, Optional<String> contacto) {
         public ParticipanteInforme { fuentes = List.copyOf(fuentes); }
+        public ParticipanteInforme(UUID referenciaInterna, TipoPersona tipo, String identificacion,
+                                    Optional<DocumentoIdentidad> documento, List<PapelFuente> fuentes,
+                                    Optional<PapelParticipacion> papelVigente, boolean discrepancia) {
+            this(referenciaInterna, tipo, identificacion, documento, fuentes, papelVigente, discrepancia, Optional.empty());
+        }
     }
     public record HechoInforme(UUID id, UUID reportePrincipalId, Optional<FechaHecho> fechaVigente, Optional<ClasificacionCategoria> clasificacionVigente,
                                 boolean datosDiscrepantes, List<ReporteInforme> reportes, List<ParticipanteInforme> personas,

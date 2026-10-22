@@ -3,6 +3,7 @@ package pe.edu.incidencias.domain.acceso;
 import pe.edu.incidencias.domain.catalogo.Gravedad;
 import pe.edu.incidencias.domain.catalogo.NaturalezaCategoria;
 import pe.edu.incidencias.domain.incidencia.*;
+import pe.edu.incidencias.domain.proteccion.ControlProteccion;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -17,7 +18,8 @@ import java.util.UUID;
 /** Política pura sobre instantáneas actuales. No autentica sesiones ni persiste las decisiones. */
 public final class PoliticaAcceso {
     public enum Resultado { PERMITIDO, CUENTA_NO_VIGENTE, ROL_NO_AUTORIZADO, FALTA_AMBITO,
-        EXCLUIDO, APORTE_AJENO, REPORTE_NO_DISPONIBLE, CORRECCION_TRAS_ATENCION, FALTA_MOTIVO_SUSTITUCION }
+        EXCLUIDO, APORTE_AJENO, REPORTE_NO_DISPONIBLE, CORRECCION_TRAS_ATENCION, FALTA_MOTIVO_SUSTITUCION,
+        BLOQUEO_JURIDICO }
     public record Decision(Resultado resultado, boolean porSustitucion, Optional<String> motivoSustitucion) {
         public boolean permitida() { return resultado == Resultado.PERMITIDO; }
     }
@@ -38,10 +40,39 @@ public final class PoliticaAcceso {
 
     private final DirectorioUsuarios directorio;
     private final RestriccionesAmbito restricciones;
+    private final ControlProteccion proteccion;
 
     public PoliticaAcceso(DirectorioUsuarios directorio, RestriccionesAmbito restricciones) {
+        this(directorio, restricciones, ControlProteccion.vacio());
+    }
+
+    public PoliticaAcceso(DirectorioUsuarios directorio, RestriccionesAmbito restricciones, ControlProteccion proteccion) {
         this.directorio = Objects.requireNonNull(directorio, "directorio");
         this.restricciones = Objects.requireNonNull(restricciones, "restricciones");
+        this.proteccion = Objects.requireNonNull(proteccion, "proteccion");
+    }
+
+    /** Filtro jurídico para poblaciones: no concede permiso funcional ni acceso a expedientes. */
+    public boolean puedeConsultarPersona(UUID personaId, Instant ahora) {
+        return proteccion.permitePersona(personaId, ahora);
+    }
+    public void exigirPersonaDisponible(UUID personaId, Instant ahora) {
+        if (!puedeConsultarPersona(personaId, ahora)) throw new SecurityException("Persona con bloqueo jurídico vigente");
+    }
+    public void exigirRecurso(UUID recursoId, Instant ahora) {
+        if (!proteccion.permiteRecurso(recursoId, ahora)) throw new SecurityException("Recurso con bloqueo jurídico vigente");
+    }
+    public Decision evaluarPersona(UUID usuario, Permiso permiso, UUID personaId, Instant ahora) {
+        validarInstante(ahora);
+        Decision decision;
+        if (permiso == Permiso.CONSULTAR_ESTADISTICAS || permiso == Permiso.CONSULTAR_CONTEXTO_INSTITUCIONAL
+                || permiso == Permiso.CONSULTAR_HECHO || permiso == Permiso.EXPORTAR_ATENCION) {
+            var cuenta = directorio.usuario(usuario).filter(u -> u.activaEn(ahora));
+            decision = cuenta.isEmpty() ? denegar(Resultado.CUENTA_NO_VIGENTE)
+                    : permitirSi(esInstitucional(cuenta.get().rolesVigentes(ahora)));
+        } else decision = evaluar(usuario, permiso, ahora);
+        return decision.permitida() && !puedeConsultarPersona(personaId, ahora)
+                ? denegar(Resultado.BLOQUEO_JURIDICO) : decision;
     }
 
     public Decision evaluar(UUID usuarioId, Permiso permiso, Instant ahora) {
@@ -56,6 +87,7 @@ public final class PoliticaAcceso {
         var usuario = directorio.usuario(usuarioId);
         if (usuario.isEmpty() || !usuario.get().activaEn(ahora)) return denegar(Resultado.CUENTA_NO_VIGENTE);
         if (permiso.requiereAmbito() && contexto.isEmpty()) return denegar(Resultado.FALTA_AMBITO);
+        if (contexto.filter(c -> !proteccion.permite(c, ahora)).isPresent()) return denegar(Resultado.BLOQUEO_JURIDICO);
         var vigentes = usuario.get().rolesVigentes(ahora);
         var efectivas = contexto.map(c -> restriccionesActualizadas(c, ahora)).orElse(restricciones);
         if (contexto.filter(c -> efectivas.estaExcluido(usuarioId, c.ambito())).isPresent()) return denegar(Resultado.EXCLUIDO);

@@ -56,7 +56,7 @@ public final class SeguimientoInstitucional {
             if (gestion.isEmpty()) continue;
             var caso = gestion.get();
             contexto = atencionesActualizadas.contextoDocumento(caso.id(), contexto.ambito());
-            var politica = new PoliticaAcceso(directorio, atencionesActualizadas.restricciones());
+            var politica = new PoliticaAcceso(directorio, atencionesActualizadas.restricciones(), atencionesActualizadas.proteccion());
             String disposicion = caso.cierre().map(CierreLocal::resultado).orElse("Atención documentada en el caso " + caso.id());
             resultado = resultado.disponer(alerta.id(), new DisposicionAlerta(DisposicionAlerta.Tipo.ATENCION,
                     disposicion, Optional.of(caso.id()), cambio), contexto, politica);
@@ -72,7 +72,7 @@ public final class SeguimientoInstitucional {
         alertas.alertas().stream().filter(a -> a.hechosHistoricos().stream().anyMatch(id -> id.equals(principal) || id.equals(origen)))
                 .forEach(a -> fuentes.addAll(a.hechosHistoricos()));
         var contexto = nuevas.contextoDeHechos(fuentes);
-        var politica = new PoliticaAcceso(directorio, nuevas.restricciones());
+        var politica = new PoliticaAcceso(directorio, nuevas.restricciones(), nuevas.proteccion());
         var ajustadas = alertas.relacionarDuplicados(nuevas.hechoVigente(principal), origen, contexto, politica, cambio);
         return actualizar(nuevas, ajustadas, Set.of(principal), directorio, cambio);
     }
@@ -87,7 +87,7 @@ public final class SeguimientoInstitucional {
                 .forEach(a -> fuentes.addAll(a.hechosHistoricos()));
         var contexto = nuevas.contextoDeHechos(fuentes);
         var ajustadas = alertas.corregirDuplicidad(nuevas.hechoVigente(principal), nuevas.hechoVigente(origen), contexto,
-                new PoliticaAcceso(directorio, nuevas.restricciones()), cambio);
+                new PoliticaAcceso(directorio, nuevas.restricciones(), nuevas.proteccion()), cambio);
         return actualizar(nuevas, ajustadas, Set.of(principal, origen), directorio, cambio);
     }
 
