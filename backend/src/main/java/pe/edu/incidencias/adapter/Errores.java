@@ -7,6 +7,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import pe.edu.incidencias.application.RegistroService.Rechazo;
 
 @RestControllerAdvice
@@ -18,8 +20,13 @@ public class Errores {
         return response(ex.status(),ex.getMessage());
     }
     @ExceptionHandler(IllegalArgumentException.class) ResponseEntity<?> validation(IllegalArgumentException e) { return response(422,e.getMessage()); }
-    @ExceptionHandler({HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class}) ResponseEntity<?> malformed(Exception e) { return response(400,"Revisa el formato de los datos y las fechas."); }
+    @ExceptionHandler({HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class}) ResponseEntity<?> malformed(Exception e) {
+        for(Throwable cause=e;cause!=null;cause=cause.getCause()) if(cause instanceof SeguridadHttp.LimiteExcedido) return response(413,"La solicitud supera el límite de 32 KB.");
+        return response(400,"Revisa el formato de los datos y las fechas.");
+    }
     @ExceptionHandler(NoResourceFoundException.class) ResponseEntity<?> missing(NoResourceFoundException e) { return response(404,"Recurso no disponible."); }
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class) ResponseEntity<?> method(HttpRequestMethodNotSupportedException e) { return response(405,"Método no permitido para este recurso."); }
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class) ResponseEntity<?> media(HttpMediaTypeNotSupportedException e) { return response(415,"Envía los datos como JSON."); }
     @ExceptionHandler(Exception.class) ResponseEntity<?> failure(Exception e) {
         org.slf4j.LoggerFactory.getLogger(Errores.class).warn("I01 operación no confirmada; tipo={}",e.getClass().getSimpleName());
         return response(503,"No se pudo confirmar la operación. Conserva tu texto y reintenta con los mismos datos.");

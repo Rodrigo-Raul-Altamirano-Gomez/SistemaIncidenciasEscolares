@@ -11,21 +11,22 @@ $backupFile = [IO.Path]::GetFullPath($BackupPath)
 $statusFile = "$backupFile.$Action.status.json"
 if ($Action -eq 'Status') { foreach($kind in @('Backup','Restore','Verify')) { $entry="$backupFile.$kind.status.json"; if(Test-Path -LiteralPath $entry) { Get-Content -LiteralPath $entry } }; exit 0 }
 if ([string]::IsNullOrWhiteSpace($Authorization) -or $Authorization.Length -gt 120) { throw 'Indica una referencia externa de autorización (sin datos personales).' }
-$key = [Convert]::FromBase64String($env:BACKUP_KEY)
-if ($key.Length -ne 32) { throw 'BACKUP_KEY debe contener 32 bytes Base64; custodiar fuera del respaldo.' }
 $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 $staging = Join-Path $tempRoot ('i01-' + [Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $staging | Out-Null
-# Los temporales contienen datos descifrados. No se heredan permisos de otros usuarios del puesto.
-& icacls.exe $staging /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" 'SYSTEM:(OI)(CI)F' | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'No se pudo proteger el directorio temporal.' }
 $started = [DateTimeOffset]::UtcNow
 $status = [ordered]@{ action=$Action; at=$started.ToString('o'); authorization=$Authorization; result='FALLO'; seconds=0; sha256=''; detail='No confirmado' }
+$key=$null; $plain=$null; $aes=$null
 function Pg([string]$exe, [string[]]$Arguments) {
     & (Join-Path $PgBin "$exe.exe") @Arguments 2> (Join-Path $staging 'pg-error.txt')
     if ($LASTEXITCODE -ne 0) { throw "Falló $exe. El resultado no está confirmado; revisa disponibilidad/credenciales y contacta al responsable operativo." }
 }
 try {
+    $key = [Convert]::FromBase64String($env:BACKUP_KEY)
+    if ($key.Length -ne 32) { throw 'BACKUP_KEY debe contener 32 bytes Base64; custodiar fuera del respaldo.' }
+    New-Item -ItemType Directory -Path $staging | Out-Null
+    # Antes de cualquier dato descifrado: no heredar permisos de otros usuarios del puesto.
+    & icacls.exe $staging /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" 'SYSTEM:(OI)(CI)F' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'No se pudo proteger el directorio temporal.' }
     if ($Action -eq 'Backup') {
         if ([Convert]::FromBase64String($env:DATA_KEY).Length -ne 32) { throw 'Falta la clave válida de los datos; no se generará una copia incompleta.' }
         if (Test-Path -LiteralPath $backupFile) { throw 'El destino ya existe. Usa otro nombre para conservar la copia anterior.' }
@@ -55,6 +56,8 @@ try {
         $aes.Decrypt($nonce,$cipher,$tag,$plain,[Text.Encoding]::UTF8.GetBytes('I01-backup-v1'))
         if ($Action -eq 'Restore') {
             if ($RestoreDatabase -notmatch '^i01_restore_[a-zA-Z0-9_]+$') { throw 'Solo se admite una base NUEVA con prefijo i01_restore_.' }
+            $recovery="$backupFile.recovered"
+            if (Test-Path -LiteralPath $recovery) { throw 'El directorio recuperado ya existe; no se sobrescribe ni se crea otra base.' }
             $zip=Join-Path $staging 'payload.zip'; [IO.File]::WriteAllBytes($zip,$plain)
             $payload=Join-Path $staging 'payload'; [IO.Compression.ZipFile]::ExtractToDirectory($zip,$payload)
             $config=Get-Content -LiteralPath (Join-Path $payload 'configuration.json') -Raw | ConvertFrom-Json
@@ -64,8 +67,6 @@ try {
             Pg 'pg_restore' @('--exit-on-error','--no-owner','--no-acl','-d',$RestoreDatabase,(Join-Path $payload 'database.dump'))
             Pg 'psql' @('-d',$RestoreDatabase,'-v','ON_ERROR_STOP=1','-c',"DELETE FROM auth_session; INSERT INTO audit_event(operation,result,metadata) VALUES ('RESTAURACION','AISLADA',jsonb_build_object('tecnico',current_user));") | Out-Null
             # Ejecutables y configuración recuperados quedan en un directorio protegido junto al archivo cifrado.
-            $recovery="$backupFile.recovered"
-            if (Test-Path -LiteralPath $recovery) { throw 'El directorio recuperado ya existe; no se sobrescribe.' }
             New-Item -ItemType Directory -Path $recovery | Out-Null
             & icacls.exe $recovery /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" 'SYSTEM:(OI)(CI)F' | Out-Null
             if ($LASTEXITCODE -ne 0) { throw 'No se pudo proteger la configuración recuperada.' }
@@ -83,6 +84,6 @@ try {
     $status | ConvertTo-Json | Set-Content -LiteralPath $statusFile
     # Comprobación explícita antes del único borrado recursivo.
     $resolvedStage=[IO.Path]::GetFullPath($staging)
-    if ($resolvedStage.StartsWith($tempRoot,[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolvedStage) -match '^i01-[a-f0-9]{32}$') { Remove-Item -LiteralPath $resolvedStage -Recurse -Force }
-    [Array]::Clear($key); if ($null -ne $plain) { [Array]::Clear($plain) }
+    if ((Test-Path -LiteralPath $resolvedStage) -and $resolvedStage.StartsWith($tempRoot,[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolvedStage) -match '^i01-[a-f0-9]{32}$') { Remove-Item -LiteralPath $resolvedStage -Recurse -Force }
+    if ($null -ne $key) { [Array]::Clear($key) }; if ($null -ne $plain) { [Array]::Clear($plain) }
 }

@@ -17,6 +17,13 @@ public final class Nota {
             participantes = participantes == null ? List.of() : List.copyOf(participantes);
         }
         public void validar(Clock clock, boolean disciplinaria) {
+            validar(clock, disciplinaria, false);
+        }
+        /** Solo para el remanente de una disposición autorizada; nunca para crear un hecho ordinario vacío. */
+        public void validarConParticipacionesRetiradas(Clock clock, boolean disciplinaria) {
+            validar(clock, disciplinaria, true);
+        }
+        private void validar(Clock clock, boolean disciplinaria, boolean participacionesRetiradas) {
             LocalDate hoy = LocalDate.now(clock);
             if (fechaHecho == null || fechaHecho.isAfter(hoy)) fail("La fecha del hecho es obligatoria y no puede ser futura.");
             if (anio != fechaHecho.getYear()) fail("El año escolar debe corresponder a la fecha del hecho.");
@@ -24,7 +31,7 @@ public final class Nota {
             if (hora != null && fechaHecho.equals(hoy) && hora.isAfter(LocalTime.now(clock))) fail("La hora real no puede ser futura.");
             texto(descripcion, 4000, true, "descripción");
             texto(lugar, 160, false, "lugar"); texto(comunicante, 160, false, "comunicante"); texto(canal, 80, false, "canal");
-            if (participantes.isEmpty() || participantes.size() > 30) fail("Selecciona entre uno y treinta estudiantes.");
+            if ((!participacionesRetiradas && participantes.isEmpty()) || participantes.size() > 30) fail("Selecciona entre uno y treinta estudiantes.");
             Set<UUID> ids = new HashSet<>();
             for (Participante p : participantes) {
                 if (p == null || p.estudianteId() == null || p.papel() == null) fail("Cada estudiante necesita un papel individual.");
@@ -37,10 +44,9 @@ public final class Nota {
                     fail("La fecha realizada debe estar entre el hecho y hoy.");
             }
             if (compromiso != null) {
-                if (accion == null) fail("Vincula el compromiso a la acción inmediata en que se acordó.");
                 texto(compromiso.contenido(), 2000, true, "compromiso"); texto(compromiso.asumidoPor(), 160, true, "persona que asume el compromiso");
-                if (compromiso.fechaObjetivo() != null && compromiso.fechaObjetivo().isBefore(accion.fechaRealizada()))
-                    fail("La fecha objetivo no puede ser anterior al acuerdo.");
+                if (compromiso.fechaObjetivo() != null && compromiso.fechaObjetivo().isBefore(accion == null ? fechaHecho : accion.fechaRealizada()))
+                    fail("La fecha objetivo no puede ser anterior al hecho o a la acción realizada informada.");
             }
         }
     }

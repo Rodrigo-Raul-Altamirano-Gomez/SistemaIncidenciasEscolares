@@ -43,4 +43,21 @@ class NotaTest {
         var diff=JdbcRegistro.diff(oldBody,newBody).getFirst();
         assertEquals("participantes",diff.campo()); assertEquals(oldBody.participantes(),diff.antes()); assertEquals(newBody.participantes(),diff.despues());
     }
+    @Test void compromisoConYSinAccionYPlazoOpcional() {
+        var e=entrada(LocalDate.of(2026,10,1),false,null,List.of(new Participante(UUID.randomUUID(),Papel.ATRIBUIDA)));
+        for(Accion action:Arrays.asList(null,new Accion("Conversación ficticia",LocalDate.of(2026,10,2),null))) {
+            for(LocalDate due:Arrays.asList(null,LocalDate.of(2026,10,3))) {
+                var input=new Entrada(e.anio(),e.fechaHecho(),false,null,e.categoriaId(),e.descripcion(),null,null,null,e.participantes(),action,new Compromiso("Acuerdo ficticio","Persona ficticia",due));
+                assertDoesNotThrow(()->input.validar(clock,true));
+            }
+        }
+        var invalid=new Entrada(e.anio(),e.fechaHecho(),false,null,e.categoriaId(),e.descripcion(),null,null,null,e.participantes(),null,new Compromiso("Acuerdo","Persona",LocalDate.of(2026,9,30)));
+        assertThrows(IllegalArgumentException.class,()->invalid.validar(clock,true));
+    }
+    @Test void remanenteNoAutorizaAltaOrdinariaSinPersonasNiOmiteOtrasValidaciones() {
+        var e=entrada(LocalDate.of(2026,10,1),false,null,List.of());
+        assertThrows(IllegalArgumentException.class,()->e.validar(clock,true));
+        assertDoesNotThrow(()->e.validarConParticipacionesRetiradas(clock,true));
+        assertThrows(IllegalArgumentException.class,()->entrada(LocalDate.of(2026,10,24),false,null,List.of()).validarConParticipacionesRetiradas(clock,true));
+    }
 }

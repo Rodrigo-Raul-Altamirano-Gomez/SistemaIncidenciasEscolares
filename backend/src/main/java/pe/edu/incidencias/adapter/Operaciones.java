@@ -18,8 +18,8 @@ import pe.edu.incidencias.application.RegistroPort.*;
 /** Herramientas locales bajo credenciales de propietario; no son endpoints ni roles escolares. */
 @Service
 public class Operaciones {
-    private final JdbcTemplate db; private final Crypto crypto; private final Acceso acceso; private final Auditoria audit;
-    public Operaciones(JdbcTemplate db,Crypto crypto,Acceso acceso,Auditoria audit) { this.db=db; this.crypto=crypto; this.acceso=acceso; this.audit=audit; }
+    private final JdbcTemplate db; private final Crypto crypto; private final Acceso acceso; private final Auditoria audit; private final Clock clock;
+    public Operaciones(JdbcTemplate db,Crypto crypto,Acceso acceso,Auditoria audit,Clock clock) { this.db=db; this.crypto=crypto; this.acceso=acceso; this.audit=audit; this.clock=clock; }
     public static UUID id(String value) { return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8)); }
     @Transactional public void seed(String password) {
         String hash=acceso.hashPassword(password);
@@ -98,7 +98,8 @@ public class Operaciones {
         Set<UUID> supplied=new HashSet<>();
         for(var s:substitutions) if(!supplied.add(s.notaId())) throw new IllegalArgumentException("Nota repetida en el manifiesto.");
         if(!actual.equals(supplied)) throw new IllegalArgumentException("El manifiesto debe cubrir exactamente todas las notas relacionadas.");
-        for(var s:substitutions) {
+        // Igual que guardar: identidad antes que notas; varias notas siempre en orden de UUID.
+        for(var s:substitutions.stream().sorted(Comparator.comparing(Sustitucion::notaId)).toList()) {
             int version=db.queryForObject("SELECT version FROM note WHERE id=? FOR UPDATE",Integer.class,s.notaId());
             if(version!=s.versionEsperada()) throw new IllegalArgumentException("Una nota cambió después de preparar la disposición.");
             Cuerpo previous=Json.read(crypto.open(db.queryForObject("SELECT body_enc FROM note WHERE id=?",String.class,s.notaId()),"note:"+s.notaId()),Cuerpo.class);
@@ -111,6 +112,11 @@ public class Operaciones {
             Set<UUID> remaining=new HashSet<>(db.queryForList("SELECT student_id FROM note_participant WHERE note_id=? AND student_id<>?",UUID.class,s.notaId(),sid));
             if(corrected!=null && before.participantes().stream().anyMatch(p->p.estudianteId().equals(sid))) remaining.add(sid);
             if(!remaining.equals(new HashSet<>(s.cuerpo().participantes().stream().map(Participacion::estudianteId).toList())) || !remaining.equals(new HashSet<>(s.cuerpo().entrada().participantes().stream().map(p->p.estudianteId()).toList()))) throw new IllegalArgumentException("La disposición debe conservar exactamente las participaciones de terceros.");
+            boolean disciplinaria=previous.naturaleza().equals("DISCIPLINARIA") && previous.gravedad().equals("LEVE");
+            // No se borra el hecho ni se inventa otra persona: el remanente aprobado puede ser anónimo.
+            // La excepción al mínimo solo existe aquí y al corregir un remanente ya existente.
+            if(remaining.isEmpty()) after.validarConParticipacionesRetiradas(clock,disciplinaria);
+            else after.validar(clock,disciplinaria);
             Set<Integer> revisions=new HashSet<>(db.queryForList("SELECT version FROM note_revision WHERE note_id=?",Integer.class,s.notaId()));
             if(!revisions.equals(s.rectificaciones().keySet())) throw new IllegalArgumentException("Falta la sustitución aprobada de una rectificación.");
             db.update("UPDATE note SET body_enc=?,version=version+1,updated_at=now() WHERE id=?",crypto.seal(Json.write(s.cuerpo()),"note:"+s.notaId()),s.notaId());

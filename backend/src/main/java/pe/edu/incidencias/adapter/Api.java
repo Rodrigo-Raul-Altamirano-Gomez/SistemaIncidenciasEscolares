@@ -21,7 +21,7 @@ public class Api {
     private ResponseCookie cookie(String token,long age) { return ResponseCookie.from("I01_SESSION",token).httpOnly(true).secure(secure).sameSite("Strict").path("/api").maxAge(age).build(); }
     @PostMapping("/acceso/login") public ResponseEntity<?> login(@RequestBody Login body,HttpServletRequest req) {
         var r=acceso.login(body.usuario(),body.clave(),req.getRemoteAddr());
-        if(r.sesion()==null) return ResponseEntity.status(r.status()).body(Map.of("mensaje",r.status()==429?"Demasiados intentos. Espera quince minutos y vuelve a intentarlo.":"No se pudo iniciar sesión. Revisa tus credenciales."));
+        if(r.sesion()==null) return ResponseEntity.status(r.status()).headers(h->{if(r.status()==429)h.set("Retry-After",String.valueOf(r.reintentoSegundos()));}).body(Map.of("mensaje",r.status()==429?(r.reintentoSegundos()==1?"Servicio de acceso ocupado. Reintenta en un momento.":"Demasiados intentos. Espera quince minutos y vuelve a intentarlo."):"No se pudo iniciar sesión. Revisa tus credenciales."));
         // Evita mantener inadvertidamente una sesión anterior en el mismo navegador.
         String old=SeguridadHttp.token(req); if(old!=null) { var previous=acceso.autenticar(old,false); if(previous!=null) acceso.logout(old,previous.actor().id()); }
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,cookie(r.sesion().token(),-1).toString()).body(info(r.sesion()));

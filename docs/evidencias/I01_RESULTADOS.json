@@ -436,5 +436,6 @@
     "OSV querybatch (54 coordenadas)",
     "npm audit --json"
   ],
-  "testServicesStoppedAfterVerification": true
+  "testServicesStoppedAfterVerification": true,
+  "evidenceScope": "Ejecución inicial histórica; auditoría vigente en I01_AUDITORIA.json"
 }

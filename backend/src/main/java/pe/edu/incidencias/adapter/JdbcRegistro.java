@@ -53,17 +53,24 @@ public class JdbcRegistro implements RegistroPort {
             audit.registrar(actor.id(),"REINTENTO_NOTA","OK",previous.id(),Map.of()); return previous;
         }
         Categoria categoria=categorias().stream().filter(c->c.id().equals(entrada.categoriaId())).findFirst().orElseThrow(()->new IllegalArgumentException("Selecciona una categoría cotidiana disponible."));
-        entrada.validar(clock,categoria.naturaleza().equals("DISCIPLINARIA") && categoria.gravedad().equals("LEVE"));
+        boolean disciplinaria=categoria.naturaleza().equals("DISCIPLINARIA") && categoria.gravedad().equals("LEVE");
+        if(!entrada.participantes().isEmpty()) entrada.validar(clock,disciplinaria);
         if (!anios().contains(entrada.anio())) throw new IllegalArgumentException("Selecciona un año escolar disponible.");
+        // Orden común con las operaciones técnicas: estudiantes (UUID ordenado), después notas.
+        // Se bloquea antes de leer la identidad y antes de tomar FOR UPDATE sobre la nota.
+        for(UUID studentId:entrada.participantes().stream().map(Participante::estudianteId).sorted().toList())
+            db.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?,2))",studentId.toString());
         Vista old=null;
         if(id!=null) {
             old=cargar(actor,id,true);
             if(version==null || version!=old.version()) throw new Rechazo(409,"Otra sesión corrigió esta nota. Conserva tu texto y abre la versión actual antes de decidir.");
         }
+        if(entrada.participantes().isEmpty()) {
+            if(old!=null && old.cuerpo().entrada().participantes().isEmpty()) entrada.validarConParticipacionesRetiradas(clock,disciplinaria);
+            else entrada.validar(clock,disciplinaria);
+        }
         UUID noteId=id==null?UUID.randomUUID():id;
         List<Participacion> participants=new ArrayList<>();
-        for(UUID studentId:entrada.participantes().stream().map(Participante::estudianteId).sorted().toList())
-            db.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?,2))",studentId.toString());
         for(Participante p:entrada.participantes()) {
             // El bloqueo asesor evita conceder UPDATE sobre la nómina al usuario ordinario del servidor.
             var students=db.queryForList("SELECT * FROM student WHERE id=? AND NOT blocked",p.estudianteId());
@@ -131,7 +138,7 @@ public class JdbcRegistro implements RegistroPort {
             AND (?::date IS NULL OR event_date>=?) AND (?::date IS NULL OR event_date<=?)
             AND (?::text IS NULL OR category_id=?) AND (?::integer IS NULL OR school_year=?)
             ORDER BY event_date DESC,created_at DESC,id LIMIT 21 OFFSET ?
-            """,UUID.class,actor.id(),f.estudianteId(),f.estudianteId(),f.desde(),f.desde(),f.hasta(),f.hasta(),blank(f.categoriaId()),blank(f.categoriaId()),f.anio(),f.anio(),Math.multiplyExact(f.pagina(),20));
+            """,UUID.class,actor.id(),f.estudianteId(),f.estudianteId(),f.desde(),f.desde(),f.hasta(),f.hasta(),blank(f.categoriaId()),blank(f.categoriaId()),f.anio(),f.anio(),20L*f.pagina());
         List<Vista> data=ids.stream().limit(20).map(id->cargar(actor,id,false)).toList();
         audit.registrar(actor.id(),"LISTAR_PROPIOS","OK",null,f);
         return new Pagina(data,ids.size()>20);

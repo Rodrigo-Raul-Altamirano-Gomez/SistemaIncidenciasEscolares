@@ -3,6 +3,7 @@ package pe.edu.incidencias.adapter;
 import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,28 +16,40 @@ public class Acceso {
     public record Sesion(Actor actor, String csrf, Instant expira, String token) {}
     private final JdbcTemplate db; private final Crypto crypto; private final Auditoria audit; private final Clock clock;
     private final BCryptPasswordEncoder passwords=new BCryptPasswordEncoder(12);
+    private final Semaphore verificaciones=new Semaphore(4);
     private final String dummy=passwords.encode(UUID.randomUUID().toString());
     public Acceso(JdbcTemplate db,Crypto crypto,Auditoria audit,Clock clock) { this.db=db; this.crypto=crypto; this.audit=audit; this.clock=clock; }
     // Los fallos deben confirmar su contador/evidencia: se retorna la denegación en vez de lanzar dentro de la transacción.
-    public record LoginResultado(Sesion sesion, int status) {}
+    public record LoginResultado(Sesion sesion, int status, int reintentoSegundos) {
+        public LoginResultado(Sesion sesion,int status) { this(sesion,status,status==429?900:0); }
+    }
     @Transactional public LoginResultado login(String login,String password,String ip) {
+        if(!verificaciones.tryAcquire()) { audit.registrar(null,"LOGIN","SATURADO",null,Map.of()); return new LoginResultado(null,429,1); }
+        try { return comprobarLogin(login,password,ip); }
+        finally { verificaciones.release(); }
+    }
+    private LoginResultado comprobarLogin(String login,String password,String ip) {
         String normalized=login==null?"":login.strip().toLowerCase(Locale.ROOT);
         if(normalized.length()>80 || password==null || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>72) {
             audit.registrar(null,"LOGIN","DENEGADO",null,Map.of()); return new LoginResultado(null,401);
         }
         String accountKey=crypto.fingerprint("login:"+normalized),ipKey=crypto.fingerprint("ip:"+ip);
-        // Orden estable de bloqueos también en solicitudes simultáneas.
-        for(String key:List.of(accountKey,ipKey).stream().sorted().toList()) db.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?,1))",key);
-        if(limited(accountKey,5) || limited(ipKey,50)) { audit.registrar(null,"LOGIN","LIMITADO",null,Map.of("cuentaHmac",accountKey)); return new LoginResultado(null,429); }
+        db.update("DELETE FROM login_throttle WHERE key IN (SELECT key FROM login_throttle WHERE started_at<=? LIMIT 500 FOR UPDATE SKIP LOCKED)",Timestamp.from(clock.instant().minusSeconds(900)));
+        // Una IP compartida no serializa todas las contraseñas ni bloquea cuentas válidas.
+        // La cuenta sigue limitada entre IP distintas; el semáforo acota el trabajo BCrypt.
+        db.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?,1))",accountKey);
+        if(limited(accountKey,5)) { audit.registrar(null,"LOGIN","LIMITADO",null,Map.of("cuentaHmac",accountKey)); return new LoginResultado(null,429); }
+        boolean ipLimited=limited(ipKey,50);
         var rows=db.queryForList("SELECT * FROM app_user WHERE login=?",normalized);
         var user=rows.isEmpty()?null:rows.getFirst();
         boolean matches=passwords.matches(password,user==null?dummy:(String)user.get("password_hash"));
         if(user==null || !matches || !(Boolean)user.get("active")) {
-            failed(accountKey); failed(ipKey); audit.registrar(null,"LOGIN","DENEGADO",null,Map.of("cuentaHmac",accountKey)); return new LoginResultado(null,401);
+            failed(accountKey); failed(ipKey); audit.registrar(null,"LOGIN",ipLimited?"LIMITADO":"DENEGADO",null,Map.of("cuentaHmac",accountKey)); return new LoginResultado(null,ipLimited?429:401);
         }
         UUID id=(UUID)user.get("id"); Instant now=clock.instant();
         String token=crypto.token(),csrf=crypto.token();
         db.update("DELETE FROM login_throttle WHERE key=?",accountKey);
+        db.update("DELETE FROM auth_session WHERE token_hash IN (SELECT token_hash FROM auth_session WHERE last_activity<=? LIMIT 500 FOR UPDATE SKIP LOCKED)",Timestamp.from(now.minusSeconds(1200)));
         db.update("INSERT INTO auth_session VALUES (?,?,?,?,?,?)",Crypto.hash(token),id,csrf,user.get("access_version"),Timestamp.from(now),Timestamp.from(now));
         audit.registrar(id,"LOGIN","OK",null,Map.of());
         return new LoginResultado(new Sesion(actor(id,(String)user.get("name")),csrf,now.plusSeconds(1200),token),200);

@@ -35,7 +35,8 @@ public class SeguridadHttp extends OncePerRequestFilter {
             Acceso.Sesion session=acceso.autenticar(token(req),!path.equals("/api/acceso/sesion"));
             if(session==null) { error(res,401,"Inicia sesión para continuar."); return; }
             req.setAttribute("sesion",session); res.setHeader("X-Session-Expires",session.expira().toString());
-            if(mutate && (req.getHeader("X-CSRF-Token")==null || !MessageDigest.isEqual(session.csrf().getBytes(StandardCharsets.UTF_8),req.getHeader("X-CSRF-Token").getBytes(StandardCharsets.UTF_8)))) {
+            // Vincula también las lecturas a la sesión de la vista: la cookie puede cambiar en otra pestaña.
+            if((mutate || !path.equals("/api/acceso/sesion")) && (req.getHeader("X-CSRF-Token")==null || !MessageDigest.isEqual(session.csrf().getBytes(StandardCharsets.UTF_8),req.getHeader("X-CSRF-Token").getBytes(StandardCharsets.UTF_8)))) {
                 acceso.denegado(session.actor().id(),403); error(res,403,"La sesión de seguridad cambió. Vuelve a autenticarte."); return;
             }
             chain.doFilter(new SolicitudLimitada(req),res);
@@ -51,13 +52,14 @@ public class SeguridadHttp extends OncePerRequestFilter {
             ServletInputStream original=super.getInputStream();
             return new ServletInputStream() {
                 int read;
-                @Override public int read() throws IOException { int b=original.read(); if(b!=-1 && ++read>32768) throw new IOException("Límite de solicitud excedido."); return b; }
+                @Override public int read() throws IOException { int b=original.read(); if(b!=-1 && ++read>32768) throw new LimiteExcedido(); return b; }
                 @Override public boolean isFinished() { return original.isFinished(); }
                 @Override public boolean isReady() { return original.isReady(); }
                 @Override public void setReadListener(ReadListener listener) { original.setReadListener(listener); }
             };
         }
     }
+    public static class LimiteExcedido extends IOException { LimiteExcedido() { super("Límite de solicitud excedido."); } }
     public static void error(HttpServletResponse res,int status,String message) throws IOException {
         res.setStatus(status); res.setContentType("application/json;charset=UTF-8"); res.getWriter().write(Json.write(Map.of("mensaje",message)));
     }
