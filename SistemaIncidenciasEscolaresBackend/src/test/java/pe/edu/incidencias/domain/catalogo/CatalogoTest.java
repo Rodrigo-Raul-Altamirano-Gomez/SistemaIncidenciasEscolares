@@ -100,6 +100,20 @@ class CatalogoTest {
     }
 
     @Test
+    void reaplicarValoresSinCambiosNoInflaHistoriasDeCategoriaNiVentana() {
+        var categoria = crear(OptionalInt.empty());
+        assertSame(categoria, categoria.actualizar(definicion(true, OptionalInt.empty()), OTRO_AUTOR_ID, FECHA.plusSeconds(1)));
+        assertSame(categoria, categoria.activar(OTRO_AUTOR_ID, FECHA.plusSeconds(1)));
+        var desactivada = categoria.desactivar(AUTOR_ID, FECHA.plusSeconds(1));
+        assertSame(desactivada, desactivada.desactivar(OTRO_AUTOR_ID, FECHA.plusSeconds(2)));
+        var parametros = ParametrosReiteracion.sinConfigurar(AUTOR_ID, FECHA);
+        assertSame(parametros, parametros.retirarVentana(OTRO_AUTOR_ID, FECHA.plusSeconds(1)));
+        var configurados = parametros.configurarVentana(30, AUTOR_ID, FECHA.plusSeconds(1));
+        assertSame(configurados, configurados.configurarVentana(30, OTRO_AUTOR_ID, FECHA.plusSeconds(2)));
+        assertThrows(IllegalArgumentException.class, () -> configurados.configurarVentana(30, AUTOR_ID, FECHA));
+    }
+
+    @Test
     void noSeAceptanUmbralesNoPositivosNiUnUmbralSinReiteracion() {
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class, () -> definicion(true, OptionalInt.of(0))),

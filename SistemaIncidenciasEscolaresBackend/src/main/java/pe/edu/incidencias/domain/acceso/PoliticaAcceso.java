@@ -1,7 +1,5 @@
 package pe.edu.incidencias.domain.acceso;
 
-import pe.edu.incidencias.domain.catalogo.Gravedad;
-import pe.edu.incidencias.domain.catalogo.NaturalezaCategoria;
 import pe.edu.incidencias.domain.incidencia.*;
 import pe.edu.incidencias.domain.proteccion.ControlProteccion;
 
@@ -100,15 +98,8 @@ public final class PoliticaAcceso {
             if (aporte.get().anulado()) return denegar(Resultado.REPORTE_NO_DISPONIBLE);
             if (permiso == Permiso.CORREGIR_APORTE_PROPIO && aporte.get().inicioAtencion().isPresent())
                 return denegar(Resultado.CORRECCION_TRAS_ATENCION);
-            if (permiso == Permiso.REGISTRAR_ACCION_COTIDIANA) {
+            if (permiso == Permiso.REGISTRAR_ACCION_INMEDIATA) {
                 if (aporte.get().inicioAtencion().isPresent()) return denegar(Resultado.CORRECCION_TRAS_ATENCION);
-                var hecho = contexto.orElseThrow().hechos().stream()
-                        .filter(h -> h.reportes().stream().anyMatch(r -> r.id().equals(aporte.get().id()))).findFirst().orElseThrow();
-                var vigente = hecho.clasificacionVigente();
-                if (vigente.isEmpty()) return denegar(Resultado.REPORTE_NO_DISPONIBLE);
-                var clasificacion = vigente.get();
-                if (clasificacion.naturaleza() != NaturalezaCategoria.CONDUCTA_DISCIPLINARIA
-                        || clasificacion.gravedad() != Gravedad.LEVE) return denegar(Resultado.ROL_NO_AUTORIZADO);
             }
             return permitir();
         }
@@ -136,7 +127,7 @@ public final class PoliticaAcceso {
                     CONSULTAR_ESTADISTICAS, EXPORTAR_ATENCION, EXCLUIR_USUARIO, RETIRAR_EXCLUSION ->
                     permitirSi(esInstitucional(vigentes));
             case CONSULTAR_APORTE_PROPIO, CORREGIR_APORTE_PROPIO, ACLARAR_APORTE_PROPIO,
-                    REGISTRAR_ACCION_COTIDIANA -> throw new IllegalStateException("La operación de aporte ya debía estar evaluada");
+                    REGISTRAR_ACCION_INMEDIATA -> throw new IllegalStateException("La operación de aporte ya debía estar evaluada");
         };
     }
 
@@ -278,7 +269,7 @@ public final class PoliticaAcceso {
     }
     private static boolean esDeAporte(Permiso permiso) {
         return permiso == Permiso.CONSULTAR_APORTE_PROPIO || permiso == Permiso.CORREGIR_APORTE_PROPIO
-                || permiso == Permiso.ACLARAR_APORTE_PROPIO || permiso == Permiso.REGISTRAR_ACCION_COTIDIANA;
+                || permiso == Permiso.ACLARAR_APORTE_PROPIO || permiso == Permiso.REGISTRAR_ACCION_INMEDIATA;
     }
     private static boolean puedeRegistrar(Set<RolUsuario> roles) {
         return esInstitucional(roles) || roles.contains(RolUsuario.DOCENTE)

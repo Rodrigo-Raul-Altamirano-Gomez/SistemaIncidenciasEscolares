@@ -95,6 +95,12 @@ public final class RegistroMatriculas {
     public Map<UUID, Confirmacion> confirmaciones() { return confirmaciones; }
 
     public Previsualizacion previsualizar(LoteMatricula lote, PoliticaAcceso politica, UUID autorId, Instant fecha) {
+        return previsualizar(lote, politica, autorId, fecha, Map.of());
+    }
+
+    /** Errores de la fila completa no deben ocultar sus conflictos de identidad con otras filas. */
+    Previsualizacion previsualizar(LoteMatricula lote, PoliticaAcceso politica, UUID autorId, Instant fecha,
+                                    Map<Integer, List<String>> erroresFila) {
         autorizar(politica, autorId, fecha);
         Objects.requireNonNull(lote, "lote");
         var anterior = confirmaciones.get(lote.id());
@@ -113,6 +119,8 @@ public final class RegistroMatriculas {
                 resultados.add(error(fila.numero(), "La identidad requiere resolución institucional antes de importar"));
             } else if (!excluida(lote, fila) && documentoRepetido(lote, fila)) {
                 resultados.add(error(fila.numero(), "Documento repetido en el lote; corrija o excluya las filas en conflicto"));
+            } else if (!excluida(lote, fila) && erroresFila.containsKey(fila.numero())) {
+                resultados.add(error(fila.numero(), String.join("; ", erroresFila.get(fila.numero()))));
             } else if (!excluida(lote, fila) && !lote.resoluciones().containsKey(fila.numero())
                     && nombreAmbiguoEnLote(lote, fila)) {
                 resultados.add(new ResultadoFila(fila.numero(), Estado.REQUIERE_CONCILIACION, Optional.empty(),
@@ -166,6 +174,8 @@ public final class RegistroMatriculas {
         if (cambio.fecha().isBefore(propuesta.fecha)) throw new IllegalArgumentException("Confirmación anterior a la revisión");
         var anterior = confirmaciones.get(propuesta.lote.id());
         if (anterior != null) {
+            if (!anterior.cambio().autorId().equals(cambio.autorId()))
+                throw new SecurityException("El resultado corresponde al lote de otro operador");
             exigirMismoLote(propuesta.lote, anterior);
             anterior.filas().stream().filter(ResultadoFila::aceptable).forEach(f ->
                     politica.exigirPersonaDisponible(f.estudianteId().orElseThrow(), cambio.fecha()));
@@ -189,7 +199,8 @@ public final class RegistroMatriculas {
         var resolucion = lote.resoluciones().get(fila.numero());
         if (resolucion != null && resolucion.accion() == LoteMatricula.Accion.EXCLUIR)
             return new ResultadoFila(fila.numero(), Estado.EXCLUIDA, Optional.empty(), List.of(), Set.of(), List.of("Excluida expresamente"));
-        if (fila.nombreCompleto().isBlank()) return error(fila.numero(), "Nombre del estudiante obligatorio; corrija o excluya la fila");
+        if (BusquedaEstudiantes.normalizar(fila.nombreCompleto()).isBlank())
+            return error(fila.numero(), "Nombre del estudiante obligatorio; corrija o excluya la fila");
         if (fila.nacimiento().filter(f -> f.isAfter(lote.fechaEfectiva())).isPresent())
             return error(fila.numero(), "Nacimiento posterior a la fecha efectiva de matrícula");
         var conciliacion = ConciliacionMatricula.evaluar(fila, List.copyOf(estudiantes.values()));
@@ -286,7 +297,7 @@ public final class RegistroMatriculas {
     }
 
     private static boolean nombreAmbiguoEnLote(LoteMatricula lote, FilaMatricula fila) {
-        return !fila.nombreCompleto().isBlank() && lote.filas().stream().anyMatch(otra -> otra.numero() != fila.numero()
+        return !BusquedaEstudiantes.normalizar(fila.nombreCompleto()).isBlank() && lote.filas().stream().anyMatch(otra -> otra.numero() != fila.numero()
                 && !excluida(lote, otra) && (fila.documento().isEmpty() || otra.documento().isEmpty())
                 && BusquedaEstudiantes.normalizar(fila.nombreCompleto()).equals(BusquedaEstudiantes.normalizar(otra.nombreCompleto())));
     }

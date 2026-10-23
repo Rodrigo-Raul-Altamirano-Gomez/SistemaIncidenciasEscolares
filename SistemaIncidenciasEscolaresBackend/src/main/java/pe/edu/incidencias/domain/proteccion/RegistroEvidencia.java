@@ -6,6 +6,7 @@ import pe.edu.incidencias.domain.incidencia.RegistroCambio;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,6 +37,8 @@ public final class RegistroEvidencia {
             Objects.requireNonNull(id); Objects.requireNonNull(usuarioId); Objects.requireNonNull(fecha);
             Objects.requireNonNull(operacion); Objects.requireNonNull(resultado); Objects.requireNonNull(alcance);
             Objects.requireNonNull(criterios); Objects.requireNonNull(operacionRelacionada);
+            if (!alcance.personas().containsAll(criterios.personasSeleccionadas()))
+                throw new IllegalArgumentException("El alcance debe incluir las personas identificadas por los criterios");
         }
         /** Dos años calendario, exclusivamente para evidencia; no impone plazo a los expedientes. */
         public Instant conservacionMinimaHasta() { return fecha.atZone(ZoneOffset.UTC).plusYears(2).toInstant(); }
@@ -60,13 +63,16 @@ public final class RegistroEvidencia {
     public static RegistroEvidencia vacio() { return new RegistroEvidencia(List.of()); }
     /** Reconstitución de evidencia almacenada por el adaptador, conservando orden y unicidad. */
     public static RegistroEvidencia cargar(List<Evento> evidencia) {
-        var registro = vacio();
+        evidencia = List.copyOf(evidencia);
+        var ids = new HashSet<UUID>();
+        Instant anterior = null;
         for (var evento : evidencia) {
-            var nuevo = registro.registrar(evento);
-            if (nuevo == registro) throw new IllegalArgumentException("La instantánea repite un evento");
-            registro = nuevo;
+            if (!ids.add(evento.id())) throw new IllegalArgumentException("La instantánea repite un evento");
+            if (anterior != null && evento.fecha().isBefore(anterior))
+                throw new IllegalArgumentException("La evidencia no puede retroceder respecto de la última operación");
+            anterior = evento.fecha();
         }
-        return registro;
+        return new RegistroEvidencia(evidencia);
     }
     public RegistroEvidencia registrar(Evento evento) {
         Objects.requireNonNull(evento);
@@ -87,6 +93,7 @@ public final class RegistroEvidencia {
         if (filtro.hasta().isAfter(cambio.fecha())) throw new IllegalArgumentException("El corte no puede ser futuro");
         if (!eventos.isEmpty() && eventos.getLast().fecha().isAfter(cambio.fecha())) throw new IllegalArgumentException("La evidencia contiene operaciones futuras");
         var seleccionados = eventos.stream().filter(filtro::incluye).filter(e -> alcance.contiene(e.alcance()))
+                .filter(e -> control.permiteRecurso(e.id(), cambio.fecha()))
                 .filter(e -> e.alcance().ambito().map(a -> !restricciones.estaExcluido(cambio.autorId(), a)).orElse(true))
                 .filter(e -> e.alcance().personas().stream().allMatch(p -> control.permitePersona(p, cambio.fecha())))
                 .filter(e -> e.alcance().recursos().stream().allMatch(r -> control.permiteRecurso(r, cambio.fecha())))

@@ -17,7 +17,7 @@ class HistorialYSalidaTest {
         r = r.abrirCaso(id(200), Set.of(id(100)), DIA, TOE, List.of(a), Optional.empty(), directorio(), cambio(20));
         var h = r.hechoVigente(id(100));
         r = r.actualizarHecho(h.actualizarReporte(h.principal().anularPorError(cambio(30))), directorio(), cambio(30));
-        var pagina = new ConsultaHistorial(r, Set.of(id(100)), politica(r), matriculas()).consultar(
+        var pagina = new ConsultaHistorial(r, Set.of(id(100)), politica(r)).consultar(
                 ConsultaHistorial.Filtro.dePersona(ESTUDIANTE), 0, 10, TOE, BASE.plusSeconds(200));
         assertEquals(1, pagina.entradas().size());
         assertTrue(pagina.entradas().getFirst().hecho().anulado());
@@ -27,7 +27,7 @@ class HistorialYSalidaTest {
     }
     @Test void autorBuscaSoloSusAportesPorPersonaPeriodoCategoriaYAnio() {
         var r = registro(hecho(100, 50, PapelParticipacion.AFECTADO), hecho(101, 51, PapelParticipacion.TESTIGO));
-        var historial = new ConsultaHistorial(r, Set.of(id(100), id(101)), politica(r), matriculas());
+        var historial = new ConsultaHistorial(r, Set.of(id(100), id(101)), politica(r));
         var filtro = new ConsultaHistorial.Filtro(Optional.of(ESTUDIANTE), Optional.empty(), Optional.of(periodo()), Optional.of(periodo()),
                 Map.of(CATEGORIA, Set.of(id(80).toString()), ANIO_ESCOLAR, Set.of("2026")));
         var resultado = historial.buscarAportesPropios(filtro, 0, 10, DOCENTE, BASE.plusSeconds(200));
@@ -37,7 +37,7 @@ class HistorialYSalidaTest {
     @Test void historialDeduplicaIncluyeParticipacionDuplicadaYPaginaSinOmitirAntecedentesPorCambioDeGrupo() {
         var h = hecho(100, 50, PapelParticipacion.AFECTADO).vincularDuplicado(hecho(101, 51, PapelParticipacion.TESTIGO).principal(), cambio(10));
         var r = registro(h, hecho(102, 51, PapelParticipacion.AFECTADO));
-        var historial = new ConsultaHistorial(r, Set.of(id(100), id(102)), politica(r), matriculas());
+        var historial = new ConsultaHistorial(r, Set.of(id(100), id(102)), politica(r));
         var filtro = ConsultaHistorial.Filtro.dePersona(id(51));
         var primero = historial.consultar(filtro, 0, 1, TOE, BASE.plusSeconds(200));
         assertEquals(1, primero.entradas().size()); assertTrue(primero.hayMas());
@@ -46,12 +46,12 @@ class HistorialYSalidaTest {
     }
     @Test void historialFiltraGrupoSnapshotSinInventarloDelPadronPosterior() {
         var r = registro(hecho(100, 50, PapelParticipacion.AFECTADO));
-        var historial = new ConsultaHistorial(r, Set.of(id(100)), politica(r), matriculas());
+        var historial = new ConsultaHistorial(r, Set.of(id(100)), politica(r));
         var filtro = new ConsultaHistorial.Filtro(Optional.of(ESTUDIANTE), Optional.empty(), Optional.empty(), Optional.empty(), Map.of(GRADO, Set.of("1"), SECCION, Set.of("A")));
         assertEquals(1, historial.consultar(filtro, 0, 20, TOE, BASE.plusSeconds(200)).entradas().size());
         var desconocido = Hecho.de(reporte(101, List.of(new Participacion(persona(50), PapelParticipacion.TESTIGO, Optional.empty())), FechaHecho.exacta(DIA), Optional.empty()));
         var r2 = registro(desconocido);
-        assertEquals(0, new ConsultaHistorial(r2, Set.of(id(101)), politica(r2), matriculas()).consultar(filtro, 0, 20, TOE, BASE.plusSeconds(200)).entradas().size());
+        assertEquals(0, new ConsultaHistorial(r2, Set.of(id(101)), politica(r2)).consultar(filtro, 0, 20, TOE, BASE.plusSeconds(200)).entradas().size());
         var q = new ConsultaEstadistica(HECHOS, periodo(), List.of(GRADO), Map.of());
         assertEquals("NO_INFORMADO", motor(r2, 101).calcular(q, TOE, BASE.plusSeconds(200)).celdas().getFirst().coordenadas().getFirst());
     }
@@ -64,7 +64,7 @@ class HistorialYSalidaTest {
     }
     @Test void aportePropioNoPermiteHistorialInstitucionalYNoExponeRelatosAjeno() {
         var r = registro(hecho(100, 50, PapelParticipacion.AFECTADO));
-        var historial = new ConsultaHistorial(r, Set.of(id(100)), politica(r), matriculas());
+        var historial = new ConsultaHistorial(r, Set.of(id(100)), politica(r));
         assertThrows(SecurityException.class, () -> historial.consultar(ConsultaHistorial.Filtro.dePersona(ESTUDIANTE), 0, 10, DOCENTE, BASE.plusSeconds(200)));
         assertEquals(DOCENTE, historial.consultarAportePropio(id(100), DOCENTE, BASE.plusSeconds(200)).autorId());
         assertThrows(SecurityException.class, () -> historial.consultarAportePropio(id(100), TOE, BASE.plusSeconds(200)));
@@ -75,7 +75,7 @@ class HistorialYSalidaTest {
                 new RegistroCambio(DIRECTOR, BASE.plusSeconds(10), Optional.of("Exclusión ficticia")));
         var r = pe.edu.incidencias.domain.atencion.RegistroAtenciones.iniciar(List.of(h, hecho(101, 51, PapelParticipacion.TESTIGO)), ledger);
         assertEquals(1, motor(r, 100, 101).calcular(consulta(HECHOS), TOE, BASE.plusSeconds(200)).total());
-        assertTrue(new ConsultaHistorial(r, Set.of(id(100), id(101)), politica(r), matriculas())
+        assertTrue(new ConsultaHistorial(r, Set.of(id(100), id(101)), politica(r))
                 .consultar(ConsultaHistorial.Filtro.dePersona(ESTUDIANTE), 0, 10, TOE, BASE.plusSeconds(200)).entradas().isEmpty());
     }
     @Test void salidaExactaReservadaNoIncluyeNombresNiRelatosYSoportaTresFormatos() {

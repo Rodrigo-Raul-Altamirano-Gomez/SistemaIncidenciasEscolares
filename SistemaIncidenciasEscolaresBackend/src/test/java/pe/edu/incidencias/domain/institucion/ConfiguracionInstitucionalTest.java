@@ -95,7 +95,11 @@ class ConfiguracionInstitucionalTest {
     @Test void bajaDelAdministradorRevocaCargaDelegada() {
         var id = UUID.randomUUID();
         var c = crear().delegar(id, admin, valores("Nuevo"), politica, cambio(toe));
-        var baja = directorio.desactivarUsuario(admin, cambio(admin));
+        var suplente = UUID.randomUUID();
+        var conSuplente = directorio.registrarUsuario(suplente, "Administrador suplente", "admin-suplente", cambio(admin))
+                .asignarRol(suplente, UUID.randomUUID(), RolUsuario.ADMINISTRADOR_OPERATIVO,
+                        new Vigencia(T, Optional.empty()), cambio(admin));
+        var baja = conSuplente.desactivarUsuario(admin, cambio(admin));
         assertThrows(SecurityException.class, () -> c.cargarDelegacion(id,
                 new PoliticaAcceso(baja, RestriccionesAmbito.vacias()), cambio(admin)));
     }
@@ -127,6 +131,19 @@ class ConfiguracionInstitucionalTest {
         assertEquals(aviso, actualizado.estado().aviso().orElseThrow());
         assertTrue(c.estado().aviso().isEmpty());
         assertThrows(IllegalArgumentException.class, () -> new AvisoPrivacidad("", "R", "D", "C", List.of(), "F", "T", "O", "P", "M"));
+    }
+    @Test void cambiarSoloDatosInstitucionalesNoDuplicaVersionesDeCategoriasSinCambios() {
+        var id = UUID.randomUUID();
+        var categorias = Map.of(id, categoria("Convivencia"));
+        var inicial = new DefinicionInstitucional(datos("Nombre inicial"), Optional.empty(), Optional.empty(),
+                categorias, Set.of(id), OptionalInt.of(30));
+        var original = ConfiguracionInstitucional.crear(inicial, politica, cambio(toe));
+        var cambioNombre = new DefinicionInstitucional(datos("Nombre actualizado"), Optional.empty(), Optional.empty(),
+                categorias, Set.of(id), OptionalInt.of(30));
+        var actual = original.definir(cambioNombre, politica, cambio(toe));
+        assertEquals(2, actual.revisiones().size());
+        assertSame(original.estado().categorias().get(id), actual.estado().categorias().get(id));
+        assertSame(original.estado().reiteracion(), actual.estado().reiteracion());
     }
     @Test void noPermiteVersionesPasadasNiMutarColecciones() {
         var c = crear().registrarAnio(2026, politica, cambio(admin));

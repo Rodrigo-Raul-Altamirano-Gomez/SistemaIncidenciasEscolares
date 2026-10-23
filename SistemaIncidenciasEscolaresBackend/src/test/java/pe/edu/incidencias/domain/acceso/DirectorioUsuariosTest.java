@@ -198,12 +198,33 @@ class DirectorioUsuariosTest {
     }
 
     @Test
-    void laBajaDelAdministradorOSuCeseNoAutorizaAutorecuperacion() {
-        var directorio = inicial().finalizarDesignacion(ADMIN, ADMIN, INICIO.plusSeconds(1), cambio(ADMIN, 1));
-        assertThrows(SecurityException.class, () -> directorio.registrarUsuario(DOCENTE,
-                "Docente ficticio", "docente", cambio(ADMIN, 2)));
-        var baja = inicial().desactivarUsuario(ADMIN, cambio(ADMIN, 1));
-        assertThrows(SecurityException.class, () -> baja.activarUsuario(ADMIN, cambio(ADMIN, 2)));
+    void noSePuedeRetirarElUltimoAccesoAdministrativoSinReemplazoVigente() {
+        var directorio = inicial();
+        assertThrows(IllegalStateException.class, () -> directorio.finalizarDesignacion(ADMIN, ADMIN,
+                INICIO.plusSeconds(1), cambio(ADMIN, 1)));
+        assertThrows(IllegalStateException.class, () -> directorio.desactivarUsuario(ADMIN, cambio(ADMIN, 1)));
+        assertTrue(directorio.usuario(ADMIN).orElseThrow().activa());
+    }
+
+    @Test
+    void reemplazoPermiteBajaOCeseSinConcederAutorecuperacionAlAdministradorSaliente() {
+        var directorio = conDocente().asignarRol(DOCENTE, id(100), RolUsuario.ADMINISTRADOR_OPERATIVO,
+                sinFin(2), cambio(ADMIN, 2));
+        var baja = directorio.desactivarUsuario(ADMIN, cambio(ADMIN, 3));
+        assertThrows(SecurityException.class, () -> baja.activarUsuario(ADMIN, cambio(ADMIN, 4)));
+        assertTrue(baja.activarUsuario(ADMIN, cambio(DOCENTE, 4)).usuario(ADMIN).orElseThrow().activa());
+        var cese = directorio.finalizarDesignacion(ADMIN, ADMIN, INICIO.plusSeconds(4), cambio(ADMIN, 3));
+        assertTrue(cese.usuario(ADMIN).orElseThrow().rolesVigentes(INICIO.plusSeconds(4)).isEmpty());
+        assertThrows(IllegalStateException.class, () -> cese.desactivarUsuario(DOCENTE, cambio(DOCENTE, 5)));
+    }
+
+    @Test
+    void ceseProgramadoExigeReemplazoEnLaFechaEfectivaSinImponerDesignacionPerpetua() {
+        var directorio = conDocente().asignarRol(DOCENTE, id(100), RolUsuario.ADMINISTRADOR_OPERATIVO,
+                hasta(2, 5), cambio(ADMIN, 2));
+        assertThrows(IllegalStateException.class, () -> directorio.finalizarDesignacion(ADMIN, ADMIN,
+                INICIO.plusSeconds(5), cambio(ADMIN, 3)));
+        assertNotNull(directorio.finalizarDesignacion(ADMIN, ADMIN, INICIO.plusSeconds(4), cambio(ADMIN, 3)));
     }
 
     @Test

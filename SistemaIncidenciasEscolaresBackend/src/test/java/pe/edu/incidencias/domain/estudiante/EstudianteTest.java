@@ -10,6 +10,31 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EstudianteTest {
+
+    @Test
+    void reimportarGrupoEquivalenteConservaSuFormaYSusFechasEfectivas() {
+        var fecha = LocalDate.of(2026, 3, 1);
+        var original = MatriculaAnual.crear(2026, fecha, Optional.of(new GrupoEscolar("Priméro", "A")), Optional.empty());
+        assertSame(original, original.incorporarGrupo(fecha, Optional.of(new GrupoEscolar("PRIMERO", "a"))));
+        var posterior = original.incorporarGrupo(fecha.plusDays(10), Optional.of(new GrupoEscolar("primero", "A")));
+        assertEquals(2, posterior.historialGrupos().size());
+        assertEquals(1, original.historialGrupos().size());
+        assertEquals("Priméro", original.grupoEn(fecha).orElseThrow().grado().orElseThrow());
+    }
+
+    @Test
+    void nacimientoYMatriculasNoSeContradicenAunqueElDatoSeAporteDespues() {
+        var historico = Estudiante.crear(UUID.randomUUID(), "Nombre")
+                .vincularMatricula(MatriculaAnual.crear(2025, LocalDate.of(2025, 3, 1), Optional.empty(), Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> historico.incorporarIdentidad(Optional.empty(), Optional.empty(),
+                Optional.of(LocalDate.of(2025, 3, 2)), Optional.empty()));
+        var conocido = Estudiante.crear(UUID.randomUUID(), "Nombre").incorporarIdentidad(Optional.empty(), Optional.empty(),
+                Optional.of(LocalDate.of(2014, 1, 1)), Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> conocido.vincularMatricula(MatriculaAnual.crear(2013,
+                LocalDate.of(2013, 3, 1), Optional.empty(), Optional.empty())));
+        assertTrue(historico.fechaNacimiento().isEmpty());
+        assertTrue(conocido.matriculas().isEmpty());
+    }
     private static final LocalDate INICIO = LocalDate.of(2026, 3, 1);
     private static final GrupoEscolar PRIMERO_A = new GrupoEscolar("Primero", "A");
     private static final GrupoEscolar PRIMERO_B = new GrupoEscolar("Primero", "B");
@@ -143,6 +168,15 @@ class EstudianteTest {
     }
 
     @Test
+    void espaciosUnicodeNoOcultanTipoDniNiConviertenBlancosEnIdentidadesOGrupos() {
+        assertThrows(IllegalArgumentException.class, () -> new DocumentoIdentidad("DNI\u00a0", "123"));
+        assertEquals(new DocumentoIdentidad("DNI", "01234567"), new DocumentoIdentidad("\u00a0dni\u00a0", "\u00a001234567\u00a0"));
+        assertThrows(IllegalArgumentException.class, () -> new DocumentoIdentidad("\u00a0", "12345678"));
+        assertThrows(IllegalArgumentException.class, () -> Estudiante.crear(UUID.randomUUID(), "\u00a0"));
+        assertThrows(IllegalArgumentException.class, () -> new GrupoEscolar("\u00a0", "A"));
+    }
+
+    @Test
     void rechazaValoresVaciosSinConvertirlosEnInformacionValida() {
         assertThrows(IllegalArgumentException.class, () -> Estudiante.crear(UUID.randomUUID(), " "));
         assertThrows(IllegalArgumentException.class, () -> new DocumentoIdentidad("", "12345678"));
@@ -160,6 +194,24 @@ class EstudianteTest {
 
         assertEquals(2, resultados.size());
         assertNotEquals(resultados.getFirst().id(), resultados.getLast().id());
+    }
+
+    @Test
+    void referenciasEscolaresDistinguenHomonimosSinExponerDatosReservados() {
+        var primero = Estudiante.crear(UUID.randomUUID(), "José Pérez")
+                .vincularMatricula(MatriculaAnual.crear(2026, INICIO, Optional.of(PRIMERO_A), Optional.of("Dato reservado")))
+                .vincularMatricula(MatriculaAnual.crear(2025, LocalDate.of(2025, 3, 1), Optional.empty(), Optional.empty()));
+        var segundo = Estudiante.crear(UUID.randomUUID(), "José Pérez")
+                .vincularMatricula(MatriculaAnual.crear(2026, INICIO, Optional.of(PRIMERO_B), Optional.empty()));
+        var resultados = BusquedaEstudiantes.porNombre(List.of(primero, segundo), "jose perez");
+        assertEquals(Optional.of(PRIMERO_A), resultados.getFirst().referenciasEscolares().getFirst().grupo());
+        assertEquals(Optional.of(PRIMERO_B), resultados.getLast().referenciasEscolares().getFirst().grupo());
+        assertEquals(2026, resultados.getFirst().referenciasEscolares().getFirst().anio());
+        assertEquals(1, resultados.getFirst().referenciasEscolares().size());
+        assertEquals(2025, BusquedaEstudiantes.porAnio(List.of(primero), 2025)
+                .getFirst().referenciasEscolares().getFirst().anio());
+        assertFalse(resultados.toString().contains("Dato reservado"));
+        assertThrows(UnsupportedOperationException.class, () -> resultados.getFirst().referenciasEscolares().clear());
     }
 
     @Test
@@ -193,6 +245,10 @@ class EstudianteTest {
         assertEquals(1, BusquedaEstudiantes.porAnio(todos, 2026).size());
         assertTrue(BusquedaEstudiantes.porAnio(todos, 2027).isEmpty());
         assertEquals(1, BusquedaEstudiantes.porGrupoEn(todos, 2026, INICIO, PRIMERO_A).size());
+        var referencia = BusquedaEstudiantes.porGrupoEn(todos, 2026, INICIO, PRIMERO_A)
+                .getFirst().referenciasEscolares().getFirst();
+        assertEquals(Optional.of(PRIMERO_A), referencia.grupo());
+        assertEquals(INICIO, referencia.fechaReferencia());
         assertTrue(BusquedaEstudiantes.porGrupoEn(todos, 2026, LocalDate.of(2026, 7, 1), PRIMERO_A).isEmpty());
         assertEquals(1, BusquedaEstudiantes.porGrupoEn(todos, 2026, LocalDate.of(2026, 7, 1),
                 new GrupoEscolar(Optional.of("primero"), Optional.empty())).size());

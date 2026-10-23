@@ -136,9 +136,7 @@ public final class ConfiguracionInstitucional {
 
     public boolean admiteGrupo(int anio, Optional<GrupoEscolar> grupo) {
         exigirAnio(anio);
-        return grupo.isEmpty() || estado.gruposPorAnio().get(anio).stream().anyMatch(g ->
-                g.grado().map(BusquedaEstudiantes::normalizar).equals(grupo.get().grado().map(BusquedaEstudiantes::normalizar))
-                && g.seccion().map(BusquedaEstudiantes::normalizar).equals(grupo.get().seccion().map(BusquedaEstudiantes::normalizar)));
+        return grupo.isEmpty() || estado.gruposPorAnio().get(anio).stream().anyMatch(g -> g.equivalenteA(grupo.get()));
     }
 
     private Estado conAnios(Map<Integer, Set<GrupoEscolar>> grupos, OptionalInt anioTrabajo) {

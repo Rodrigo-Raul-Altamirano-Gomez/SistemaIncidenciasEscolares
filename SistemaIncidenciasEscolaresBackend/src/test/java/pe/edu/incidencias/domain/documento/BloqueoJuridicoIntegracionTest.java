@@ -3,6 +3,7 @@ package pe.edu.incidencias.domain.documento;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import pe.edu.incidencias.domain.acceso.*;
 import pe.edu.incidencias.domain.alerta.BandejaAtencion;
 import pe.edu.incidencias.domain.alerta.RegistroAlertas;
@@ -12,6 +13,7 @@ import pe.edu.incidencias.domain.atencion.Compromiso;
 import pe.edu.incidencias.domain.incidencia.*;
 import pe.edu.incidencias.domain.proteccion.*;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
@@ -54,6 +56,25 @@ class BloqueoJuridicoIntegracionTest {
         var control = bloquear(new AlcanceProteccion(Optional.empty(), Set.of(), Set.of(id(301))));
         assertThrows(SecurityException.class, () -> actas.archivoParaDescarga(id(300), id(301), TOE,
                 reloj(140), registro.conProteccion(control), directorio()));
+    }
+    @ParameterizedTest @ValueSource(longs = {300, 301, 500})
+    void informeConservadoRevalidaActasArchivosYReferenciasQueProyecta(long recurso) {
+        var registro = abierto();
+        var actas = RegistroActas.vacio().registrar(acta(), registro, directorio(), Optional.empty());
+        var referencia = new ReferenciaOficial(id(500), registro.contexto(CASO).ambito(), InstrumentoOficial.SISEVE,
+                "Origen comunicado", Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of("Referencia reservada"), cambio(TOE, 110));
+        var referencias = ReferenciasOficiales.vacias().registrar(referencia, registro.contexto(CASO), directorio(), registro.restricciones());
+        var generador = new GeneradorInformeCaso(registro, actas, referencias, directorio(), Map.of());
+        var vista = vista(generador);
+        var emitido = generador.emitir(vista, id(900), cambio(TOE, 125));
+        var control = bloquear(new AlcanceProteccion(Optional.empty(), Set.of(), Set.of(id(recurso))));
+        var actual = new GeneradorInformeCaso(registro.conProteccion(control), actas, referencias, directorio(), Map.of());
+        assertThrows(SecurityException.class, () -> actual.emitir(vista, id(901), cambio(TOE, 140)));
+        assertThrows(SecurityException.class, () -> actual.consultarEmitido(emitido, TOE, reloj(140)));
+        assertEquals(1, emitido.actas().size());
+        assertEquals(1, emitido.referencias().size());
+        assertNotNull(registro.conProteccion(control).consultarCaso(CASO, TOE, directorio(), reloj(140)));
     }
     @Test void personaRetiradaDeVersionActualSigueProtegidaEnRevisionAnterior() {
         var original = reporte(100, estudiante(), PapelParticipacion.AFECTADO, HOY, "Comunicación original");

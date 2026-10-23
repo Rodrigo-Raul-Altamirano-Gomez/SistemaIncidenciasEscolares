@@ -91,6 +91,17 @@ class InformeExternoTest {
         assertThrows(IllegalArgumentException.class, () -> DestinoInforme.tercero(" ", "Finalidad"));
     }
 
+    @Test void nombreCortoProtegidoNoObligaATranscribirPalabrasAjenasQueLoContienen() {
+        var persona = PersonaInvolucrada.estudiante(ESTUDIANTE, "Ana");
+        var h = Hecho.de(reporte(100, persona, PapelParticipacion.AFECTADO, HOY, "Se hará seguimiento durante la semana"));
+        var g = generador(abrir(h));
+        var revision = revision(Set.of(ESTUDIANTE), Map.of(), TOE);
+        var informe = externa(g, revision);
+        assertEquals("Se hará seguimiento durante la semana", informe.hechos().getFirst().reportes().getFirst().relato());
+        var conNombre = Hecho.de(reporte(100, persona, PapelParticipacion.AFECTADO, HOY, "Se entrevistó a ANA, estudiante afectada"));
+        assertThrows(IllegalArgumentException.class, () -> externa(generador(abrir(conNombre)), revision));
+    }
+
     @Test void accionesYCompromisosConIdentidadesProtegidasTambienSeAdecuan() {
         var compromiso = Compromiso.acordar(id(401), "María Lucía Pérez Soto asumió un acuerdo", estudiante(), Optional.empty(), true, cambio(TOE, 110));
         var accion = Actuacion.realizada(id(400), "María Lucía Pérez Soto fue atendida", HOY, TOE, Set.of(), Set.of(), List.of(compromiso), cambio(TOE, 110));

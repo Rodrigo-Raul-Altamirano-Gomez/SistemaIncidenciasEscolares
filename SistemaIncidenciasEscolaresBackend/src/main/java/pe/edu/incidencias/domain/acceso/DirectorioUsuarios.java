@@ -68,7 +68,9 @@ public final class DirectorioUsuarios {
     public DirectorioUsuarios finalizarDesignacion(UUID usuarioId, UUID designacionId, Instant fin,
                                                    RegistroCambio cambio) {
         validarAdministrador(cambio);
-        var cuenta = requerirUsuario(usuarioId).finalizar(designacionId, fin, cambio);
+        var anterior = requerirUsuario(usuarioId);
+        var cuenta = anterior.finalizar(designacionId, fin, cambio);
+        exigirContinuidadAdministrativa(anterior, cuenta, fin);
         return guardar(cuenta, Operacion.FIN_DESIGNACION, Optional.of(designacionId), cambio);
     }
 
@@ -84,8 +86,17 @@ public final class DirectorioUsuarios {
         validarAdministrador(cambio);
         var actual = requerirUsuario(usuarioId);
         var nueva = actual.cambiarEstado(activa, cambio);
+        exigirContinuidadAdministrativa(actual, nueva, cambio.fecha());
         return nueva == actual ? this : guardar(nueva, activa ? Operacion.REACTIVACION : Operacion.BAJA,
                 Optional.empty(), cambio);
+    }
+
+    private void exigirContinuidadAdministrativa(Usuario anterior, Usuario nueva, Instant instante) {
+        if (!anterior.rolesVigentes(instante).contains(RolUsuario.ADMINISTRADOR_OPERATIVO)) return;
+        boolean quedaAdministrador = usuarios.values().stream().map(u -> u.id().equals(nueva.id()) ? nueva : u)
+                .anyMatch(u -> u.rolesVigentes(instante).contains(RolUsuario.ADMINISTRADOR_OPERATIVO));
+        if (!quedaAdministrador)
+            throw new IllegalStateException("Debe designar otro administrador vigente antes de retirar el último acceso administrativo");
     }
 
     private void validarAdministrador(RegistroCambio cambio) {

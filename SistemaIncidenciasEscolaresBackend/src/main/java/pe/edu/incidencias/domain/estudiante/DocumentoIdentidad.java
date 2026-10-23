@@ -16,10 +16,10 @@ public record DocumentoIdentidad(String tipo, String numero) {
     }
 
     private static String textoObligatorio(String valor, String campo) {
-        Objects.requireNonNull(valor, campo);
-        if (valor.isBlank()) {
+        String texto = Objects.requireNonNull(valor, campo).replaceAll("(?U)^\\s+|\\s+$", "");
+        if (texto.isBlank()) {
             throw new IllegalArgumentException(campo + " no puede estar vacío.");
         }
-        return valor.strip();
+        return texto;
     }
 }

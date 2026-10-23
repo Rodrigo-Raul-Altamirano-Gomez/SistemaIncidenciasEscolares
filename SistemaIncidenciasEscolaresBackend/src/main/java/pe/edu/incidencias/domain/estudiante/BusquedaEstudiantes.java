@@ -3,6 +3,7 @@ package pe.edu.incidencias.domain.estudiante;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -35,7 +36,8 @@ public final class BusquedaEstudiantes {
     public static List<Coincidencia> porAnio(Collection<Estudiante> estudiantes, int anio) {
         Objects.requireNonNull(estudiantes, "estudiantes");
         return estudiantes.stream().filter(estudiante -> estudiante.matricula(anio).isPresent())
-                .map(BusquedaEstudiantes::coincidencia).toList();
+                .map(estudiante -> new Coincidencia(estudiante.id(), estudiante.nombreCompleto(),
+                        List.of(referencia(estudiante.matricula(anio).orElseThrow())))).toList();
     }
 
     public static List<Coincidencia> porGrupoEn(Collection<Estudiante> estudiantes, int anio,
@@ -48,7 +50,8 @@ public final class BusquedaEstudiantes {
         }
         return estudiantes.stream()
                 .filter(estudiante -> estudiante.grupoEn(anio, fecha).filter(conocido -> mismoGrupo(conocido, grupo)).isPresent())
-                .map(BusquedaEstudiantes::coincidencia).toList();
+                .map(estudiante -> new Coincidencia(estudiante.id(), estudiante.nombreCompleto(),
+                        List.of(new ReferenciaEscolar(anio, fecha, estudiante.grupoEn(anio, fecha))))).toList();
     }
 
     public static String normalizar(String texto) {
@@ -67,8 +70,21 @@ public final class BusquedaEstudiantes {
     }
 
     private static Coincidencia coincidencia(Estudiante estudiante) {
-        return new Coincidencia(estudiante.id(), estudiante.nombreCompleto());
+        return new Coincidencia(estudiante.id(), estudiante.nombreCompleto(), estudiante.matriculas().values().stream()
+                .max(Comparator.comparingInt(MatriculaAnual::anio)).stream()
+                .map(BusquedaEstudiantes::referencia).toList());
     }
 
-    public record Coincidencia(UUID id, String nombreCompleto) { }
+    private static ReferenciaEscolar referencia(MatriculaAnual matricula) {
+        var ultimo = matricula.historialGrupos().lastEntry();
+        return new ReferenciaEscolar(matricula.anio(), ultimo.getKey(), ultimo.getValue());
+    }
+
+    /** Grupo al día consultado o, sin fecha de consulta, último registrado en ese año. */
+    public record ReferenciaEscolar(int anio, LocalDate fechaReferencia, Optional<GrupoEscolar> grupo) { }
+
+    public record Coincidencia(UUID id, String nombreCompleto, List<ReferenciaEscolar> referenciasEscolares) {
+        public Coincidencia { referenciasEscolares = List.copyOf(referenciasEscolares); }
+        public Coincidencia(UUID id, String nombreCompleto) { this(id, nombreCompleto, List.of()); }
+    }
 }

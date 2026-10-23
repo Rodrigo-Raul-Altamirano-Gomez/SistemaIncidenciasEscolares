@@ -58,6 +58,7 @@ public final class BandejaAtencion {
             var fundamentosDelCaso = new ArrayList<>(relacionadas);
             for (var historica : alertas.alertas()) if (historica.disposicion().filter(d -> d.tipo() == DisposicionAlerta.Tipo.ATENCION
                     && d.referenciaId().filter(caso.id()::equals).isPresent()).isPresent()) {
+                try { politica.exigirRecurso(historica.id(), ahora); } catch (SecurityException bloqueada) { continue; }
                 var contexto = atenciones.contextoDeHechos(historica.hechosHistoricos());
                 if (politica.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto, ahora).permitida())
                     fundamentosDelCaso.add(alertas.consultar(historica.id(), contexto, politica, usuarioId, ahora));

@@ -87,6 +87,7 @@ public final class ParametrosReiteracion {
         if (revision.fecha().isBefore(revisiones.getLast().fecha())) {
             throw new IllegalArgumentException("La fecha de cambio no puede preceder la revisión vigente");
         }
+        if (revision.ventanaDias().equals(ventanaDias())) return this;
         List<RevisionVentana> historia = new ArrayList<>(revisiones);
         historia.add(revision);
         return new ParametrosReiteracion(historia);

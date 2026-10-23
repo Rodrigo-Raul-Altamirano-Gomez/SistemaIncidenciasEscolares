@@ -8,6 +8,8 @@ Proyecto para registrar y dar seguimiento a incidencias escolares, organizar la 
 
 La carpeta contiene una biblioteca Java con los incrementos de dominio 1 a 7, sus revisiones correctivas, la conciliación de matrícula 8A y la continuación de importación/contexto, consultas/estadísticas, configuración y protección de datos. Todavía no es una aplicación desplegable ni está preparada para operar con datos reales. Implementar las reglas de dominio no equivale a aceptar la ERS de extremo a extremo.
 
+La auditoría integral posterior contrasta los diez paquetes con la ERS y corrige reserva de informes/actas/alertas, validación por fila, reintentos, identidad, consultas y continuidad administrativa. El [documento de implementación](SistemaIncidenciasEscolaresBackend/docs/domain/IMPLEMENTACION_DOMAIN.md) conserva los hallazgos, decisiones de simplificación, regresiones y contratos que debe respetar la siguiente capa.
+
 | Área | Implementación actual |
 | --- | --- |
 | Estudiantes | Identidad estable, documento opcional, matrícula anual, grupos históricos y búsquedas en memoria. |
@@ -44,7 +46,7 @@ SistemaIncidenciasEscolares/
         └── test/java/pe/edu/incidencias/domain/
 ```
 
-Hay 90 archivos Java productivos y 42 archivos Java de pruebas (40 suites y dos auxiliares). Las capas `application` y `adapter` no tienen implementación; Git no conserva directorios vacíos. El dominio no realiza I/O ni genera UUID o fechas de operación por su cuenta.
+Hay 90 archivos Java productivos y 45 archivos Java de pruebas (43 suites y dos auxiliares). Las capas `application` y `adapter` no tienen implementación; Git no conserva directorios vacíos. El dominio no realiza I/O ni consulta el reloj. Los identificadores de operaciones se reciben explícitamente; señales y avisos derivan UUID estables de su origen para evitar duplicados.
 
 El incremento 8A recibe filas ya seleccionadas, interpretadas y validadas por un futuro adaptador. `RegistroMatriculas.previsualizar` devuelve cambios, advertencias y conflictos sin modificar el estado; `confirmar` revalida el permiso AIP y devuelve otro registro completo con evidencia del lote. Un documento único sin contradicción permite reconocer la misma identidad entre años. Nombre/grupo nunca unen personas automáticamente. El grupo común completa desconocidos y conserva los grupos ya conocidos.
 
@@ -52,7 +54,7 @@ La integración debe aportar un padrón completo para conciliar documentos, una 
 
 `RegistroImportacion` añade contexto/contactos e historial a esa misma unidad de confirmación. Su entrada pública valida año/grupos y alcance contra `ConfiguracionInstitucional`. Los candidatos y resultados AIP no conceden lectura de antecedentes anteriores. Las reglas de asociación reciben encabezados interpretados: leer celdas `.xlsx`, fórmulas guardadas y formatos sigue siendo tarea del adaptador.
 
-`MotorEstadisticas` y `ConsultaHistorial` derivan resultados de registros de hechos/atención/alertas y de la nómina autorizada. Los grupos del análisis proceden de las participaciones históricas del hecho; la población denominadora usa su referencia anual explícita. Se distinguen datos no informados, discrepancias, cero y proporciones no calculables. `SalidaEstadistica` prepara tablas para PDF/CSV/XLSX y revalida todas las fuentes del corte al descargar; no genera bytes ni publica información.
+`MotorEstadisticas` deriva resultados de registros de hechos/atención/alertas y de la nómina autorizada. `ConsultaHistorial` usa hechos y atención sin cargar el padrón completo. Los grupos del análisis proceden de las participaciones históricas del hecho; la población denominadora usa su referencia anual explícita. Se distinguen datos no informados, discrepancias, cero y proporciones no calculables. `SalidaEstadistica` prepara tablas para PDF/CSV/XLSX y revalida todas las fuentes del corte al descargar, incluidas las que aportan cobertura; no genera bytes ni publica información.
 
 `ControlProteccion` se suministra actualizado a la política y registros protegidos. La autorización para disponer datos o extraer evidencia es institucional y específica, sin un rol de acceso universal. `DisposicionDatos` transforma representaciones delimitadas, protege campos de terceros y comprueba el manifiesto completo antes de registrar ejecución. El adaptador debe enumerar las copias operativas, aplicar cambios y releerlos; preparar un plan no acredita haber borrado archivos o datos persistidos. Las copias de recuperación requieren el procedimiento institucional documentado.
 
@@ -80,7 +82,7 @@ Para generar el JAR de la biblioteca:
 .\mvnw.cmd -B package
 ```
 
-Con Maven y sus dependencias ya descargados se puede añadir `-o` para trabajar sin conexión. Los resultados se generan en `target/surefire-reports/`. Verificación del 22 de octubre de 2026: `mvnw.cmd -B -o clean test`, con JDK 27 y compilación `release 25`, terminó con **BUILD SUCCESS: 610 pruebas, sin fallos, errores ni omisiones**. La continuación añade 155 ejecuciones a las 455 existentes después de 8A. Los informes y las clases compiladas se regeneran localmente y no se versionan.
+Con Maven y sus dependencias ya descargados se puede añadir `-o` para trabajar sin conexión. Los resultados se generan en `target/surefire-reports/`. Verificación posterior a la auditoría del 22 de octubre de 2026: `mvnw.cmd -B -o clean test`, con JDK 27 y compilación `release 25`, terminó con **BUILD SUCCESS: 651 pruebas, sin fallos, errores ni omisiones**. La auditoría añade 41 ejecuciones a las 610 existentes. Los informes y las clases compiladas se regeneran localmente y no se versionan.
 
 No hay todavía un servidor o interfaz que iniciar: el JAR corresponde al núcleo de dominio.
 
@@ -97,4 +99,4 @@ No se declara aceptado ningún caso de uso de aplicación de extremo a extremo p
 
 ## Archivos del repositorio
 
-Se versionan el código fuente, las pruebas, el Wrapper de Maven y el README principal. Los `.gitignore` excluyen compilados, configuración local del IDE, registros y credenciales. Los archivos de matrícula con datos personales deben mantenerse fuera del repositorio; los ejemplos de prueba son ficticios.
+Se versionan el código fuente, las pruebas, el Wrapper de Maven, el README principal, la [ERS](SistemaIncidenciasEscolaresBackend/ERS_Incidencias_Escolares.md) y el [detalle de implementación del dominio](SistemaIncidenciasEscolaresBackend/docs/domain/IMPLEMENTACION_DOMAIN.md). Los `.gitignore` excluyen compilados, configuración local del IDE, registros y credenciales. Los archivos de matrícula con datos personales deben mantenerse fuera del repositorio; los ejemplos de prueba son ficticios.

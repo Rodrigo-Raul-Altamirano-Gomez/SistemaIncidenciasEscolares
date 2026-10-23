@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
+import static pe.edu.incidencias.domain.estudiante.BusquedaEstudiantes.normalizar;
+
 /** Trayectoria reservada por identidad conocida; no crea padrón externo ni concilia nombres de personas. */
 public final class ConsultaHistorial {
     public record Filtro(Optional<UUID> personaId, Optional<String> textoPersona,
@@ -18,7 +20,7 @@ public final class ConsultaHistorial {
             Objects.requireNonNull(personaId); Objects.requireNonNull(textoPersona);
             Objects.requireNonNull(fechasHecho); Objects.requireNonNull(fechasRegistro);
             textoPersona = textoPersona.map(String::strip);
-            if (textoPersona.filter(String::isBlank).isPresent()) throw new IllegalArgumentException("Texto de persona vacío");
+            if (textoPersona.filter(t -> normalizar(t).isBlank()).isPresent()) throw new IllegalArgumentException("Texto de persona vacío");
             var copia = new EnumMap<ConsultaEstadistica.Dimension, Set<String>>(ConsultaEstadistica.Dimension.class);
             criterios.forEach((d, valores) -> {
                 if (!Set.of(ConsultaEstadistica.Dimension.CATEGORIA, ConsultaEstadistica.Dimension.GRAVEDAD,
@@ -49,14 +51,11 @@ public final class ConsultaHistorial {
     private final RegistroAtenciones registro;
     private final Set<UUID> universo;
     private final PoliticaAcceso politica;
-    private final Map<UUID, pe.edu.incidencias.domain.estudiante.Estudiante> estudiantes;
 
-    public ConsultaHistorial(RegistroAtenciones registro, Set<UUID> hechosCargados, PoliticaAcceso politicaActual,
-                             pe.edu.incidencias.domain.estudiante.RegistroMatriculas matriculas) {
+    public ConsultaHistorial(RegistroAtenciones registro, Set<UUID> hechosCargados, PoliticaAcceso politicaActual) {
         this.registro = Objects.requireNonNull(registro);
         this.politica = Objects.requireNonNull(politicaActual);
         this.universo = hechosCargados.stream().map(registro::hechoVigente).map(Hecho::id).collect(java.util.stream.Collectors.toUnmodifiableSet());
-        this.estudiantes = matriculas.estudiantes();
     }
     public Pagina consultar(Filtro filtro, int desplazamiento, int limite, UUID usuario, Instant ahora) {
         if (desplazamiento < 0 || limite < 1 || limite > 500) throw new IllegalArgumentException("Tramo inválido");
@@ -67,18 +66,16 @@ public final class ConsultaHistorial {
             if (!registro.proteccion().permite(contexto, ahora) || registro.restricciones().estaExcluido(usuario, contexto.ambito())
                     || !politica.evaluar(usuario, Permiso.CONSULTAR_HECHO, contexto, ahora).permitida()) continue;
             var hecho = registro.hechoVigente(id);
-            var participaciones = hecho.participaciones().stream().filter(p -> filtro.personaId().map(p.personaId()::equals).orElse(true))
-                    .filter(p -> filtro.textoPersona().map(t -> p.persona().descripcion().toLowerCase(Locale.ROOT)
-                            .contains(t.toLowerCase(Locale.ROOT))).orElse(true)).toList();
+            var participaciones = hecho.participaciones().stream().filter(p -> personaCoincide(p.persona(), filtro)).toList();
             if (participaciones.isEmpty() && (!hecho.anulado() || !personaHistoricaCoincide(hecho, filtro))) continue;
-            if (filtro.fechasHecho().isPresent() && !(hecho.anulado() ? hecho.reportes().stream().map(r -> r.datos().fechaHecho().fecha())
-                    .anyMatch(filtro.fechasHecho().get()::contiene) : hecho.fechaVigente().map(FechaHecho::fecha)
-                    .map(filtro.fechasHecho().get()::contiene).orElse(filtro.fechasHecho().get().incluirFechaNoPrecisada()))) continue;
+            if (!hecho.anulado() && filtro.fechasHecho().isPresent() && !hecho.fechaVigente().map(FechaHecho::fecha)
+                    .map(filtro.fechasHecho().get()::contiene).orElse(filtro.fechasHecho().get().incluirFechaNoPrecisada())) continue;
             if (filtro.fechasRegistro().isPresent() && hecho.reportes().stream()
                     .noneMatch(r -> filtro.fechasRegistro().get().contiene(r.fechaRegistro().atZone(ReporteIncidencia.ZONA_ESCOLAR).toLocalDate()))) continue;
             var casos = registro.casos().stream().filter(c -> c.hechosReservados().stream().map(registro::hechoCanonico).anyMatch(id::equals)).toList();
             // Un caso puede ampliar el ámbito por antecedentes: cada elemento se autoriza antes de proyectarlo.
             casos = casos.stream().filter(c -> registro.casoDisponible(c.id(), ahora)
+                    && !registro.restricciones().estaExcluido(usuario, registro.contexto(c.id()).ambito())
                     && politica.evaluar(usuario, Permiso.CONSULTAR_HECHO, registro.contexto(c.id()), ahora).permitida()).toList();
             if (!cumple(filtro, hecho, participaciones, casos)) continue;
             var actuaciones = new LinkedHashMap<UUID, Actuacion>();
@@ -115,14 +112,18 @@ public final class ConsultaHistorial {
         if (!hecho.anulado() && !personas.stream().anyMatch(p -> java.util.stream.Stream.of(ConsultaEstadistica.Dimension.GRADO,
                 ConsultaEstadistica.Dimension.SECCION).allMatch(d -> !filtro.criterios().containsKey(d)
                 || filtro.criterios().get(d).contains(MotorEstadisticas.grupoHistorico(p, d == ConsultaEstadistica.Dimension.GRADO))))) return false;
-        if (hecho.anulado() && (!filtro.criterios().isEmpty())) {
+        String estado = casos.stream().anyMatch(c -> c.estado() == CasoAtencion.Estado.PENDIENTE) ? "PENDIENTE"
+                : casos.isEmpty() ? "SIN_ATENCION" : "CERRADA";
+        if (hecho.anulado()) {
             // Localización histórica explícita; nunca se crea una participación vigente para el resultado.
-            return hecho.reportes().stream().anyMatch(r -> cumpleDatosPropios(r.datos(), r.inicioAtencion().isPresent(), filtro));
+            return hecho.reportes().stream().filter(r -> filtro.fechasRegistro().map(p -> p.contiene(
+                            r.fechaRegistro().atZone(ReporteIncidencia.ZONA_ESCOLAR).toLocalDate())).orElse(true))
+                    .flatMap(r -> r.revisiones().stream()).anyMatch(r -> filtro.fechasHecho()
+                            .map(p -> p.contiene(r.datos().fechaHecho().fecha())).orElse(true)
+                            && cumpleDatosPropios(r.datos(), estado, filtro));
         }
         var anios = hecho.reportes().stream().filter(r -> !r.anulado()).map(r -> r.datos().anioEscolar()).distinct().toList();
         String anio = anios.size() == 1 ? anios.getFirst().toString() : ResultadoEstadistico.NO_INFORMADO;
-        String estado = casos.stream().anyMatch(c -> c.estado() == CasoAtencion.Estado.PENDIENTE) ? "PENDIENTE"
-                : casos.isEmpty() ? "SIN_ATENCION" : "CERRADA";
         for (var criterio : filtro.criterios().entrySet()) {
             var valores = criterio.getValue();
             boolean coincide = switch (criterio.getKey()) {
@@ -140,11 +141,11 @@ public final class ConsultaHistorial {
 
     private static boolean personaHistoricaCoincide(Hecho hecho, Filtro filtro) {
         return hecho.reportes().stream().flatMap(r -> r.revisiones().stream()).flatMap(r -> r.datos().participaciones().stream())
-                .anyMatch(p -> personaCoincide(p, filtro));
+                .anyMatch(p -> personaCoincide(p.persona(), filtro));
     }
-    private static boolean personaCoincide(Participacion p, Filtro filtro) {
-        return filtro.personaId().map(p.persona().id()::equals).orElse(true)
-                && filtro.textoPersona().map(t -> p.persona().descripcion().toLowerCase(Locale.ROOT).contains(t.toLowerCase(Locale.ROOT))).orElse(true);
+    private static boolean personaCoincide(PersonaInvolucrada persona, Filtro filtro) {
+        return filtro.personaId().map(persona.id()::equals).orElse(true)
+                && filtro.textoPersona().map(t -> normalizar(persona.descripcion()).contains(normalizar(t))).orElse(true);
     }
 
     public record PaginaAportes(List<PoliticaAcceso.AportePropio> aportes, int siguienteDesplazamiento, boolean hayMas) {
@@ -165,22 +166,22 @@ public final class ConsultaHistorial {
                 var datos = vista.revisionesPropias().getLast().datos();
                 if (filtro.fechasHecho().filter(p -> !p.contiene(datos.fechaHecho().fecha())).isPresent()) continue;
                 if (filtro.fechasRegistro().filter(p -> !p.contiene(vista.fechaRegistro().atZone(ReporteIncidencia.ZONA_ESCOLAR).toLocalDate())).isPresent()) continue;
-                if (cumpleDatosPropios(datos, vista.relacionadoParaAtencion(), filtro)) aportes.add(vista);
+                if (cumpleDatosPropios(datos, vista.relacionadoParaAtencion() ? "CON_ATENCION" : "SIN_ATENCION", filtro)) aportes.add(vista);
             }
         }
         aportes.sort(Comparator.comparing(PoliticaAcceso.AportePropio::fechaRegistro).thenComparing(PoliticaAcceso.AportePropio::reporteId));
         int inicio = Math.min(desplazamiento, aportes.size()); int fin = (int) Math.min((long) inicio + limite, aportes.size());
         return new PaginaAportes(aportes.subList(inicio, fin), fin, fin < aportes.size());
     }
-    private static boolean cumpleDatosPropios(DatosReporte datos, boolean atendido, Filtro filtro) {
-        return datos.participaciones().stream().filter(p -> personaCoincide(p, filtro)).anyMatch(p -> filtro.criterios().entrySet().stream().allMatch(e -> {
+    private static boolean cumpleDatosPropios(DatosReporte datos, String estado, Filtro filtro) {
+        return datos.participaciones().stream().filter(p -> personaCoincide(p.persona(), filtro)).anyMatch(p -> filtro.criterios().entrySet().stream().allMatch(e -> {
             String valor = switch (e.getKey()) {
                 case CATEGORIA -> datos.clasificacion().categoriaId().toString();
                 case GRAVEDAD -> datos.clasificacion().gravedad().name();
                 case ANIO_ESCOLAR -> Integer.toString(datos.anioEscolar());
                 case GRADO -> p.grupoHistorico().flatMap(pe.edu.incidencias.domain.estudiante.GrupoEscolar::grado).orElse(ResultadoEstadistico.NO_INFORMADO);
                 case SECCION -> p.grupoHistorico().flatMap(pe.edu.incidencias.domain.estudiante.GrupoEscolar::seccion).orElse(ResultadoEstadistico.NO_INFORMADO);
-                case ESTADO_ATENCION -> atendido ? "CON_ATENCION" : "SIN_ATENCION";
+                case ESTADO_ATENCION -> estado;
                 default -> ResultadoEstadistico.NO_INFORMADO;
             };
             return e.getValue().contains(valor);

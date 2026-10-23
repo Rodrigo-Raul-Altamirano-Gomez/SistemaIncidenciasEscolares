@@ -62,7 +62,7 @@ class PoliticaAccesoTest {
         var ajeno = ContextoAcceso.deAporte(hecho(DOCENTE), id(100));
 
         for (var permiso : List.of(Permiso.CONSULTAR_APORTE_PROPIO, Permiso.CORREGIR_APORTE_PROPIO,
-                Permiso.ACLARAR_APORTE_PROPIO, Permiso.REGISTRAR_ACCION_COTIDIANA)) {
+                Permiso.ACLARAR_APORTE_PROPIO, Permiso.REGISTRAR_ACCION_INMEDIATA)) {
             assertTrue(politica.evaluar(SUJETO, permiso, propio, AHORA).permitida(), permiso.name());
             assertEquals(PoliticaAcceso.Resultado.APORTE_AJENO,
                     politica.evaluar(SUJETO, permiso, ajeno, AHORA).resultado(), permiso.name());
@@ -104,7 +104,7 @@ class PoliticaAccesoTest {
         assertEquals(PoliticaAcceso.Resultado.CORRECCION_TRAS_ATENCION,
                 politica.evaluar(DOCENTE, Permiso.CORREGIR_APORTE_PROPIO, contexto, AHORA).resultado());
         assertEquals(PoliticaAcceso.Resultado.CORRECCION_TRAS_ATENCION,
-                politica.evaluar(DOCENTE, Permiso.REGISTRAR_ACCION_COTIDIANA, contexto, AHORA).resultado());
+                politica.evaluar(DOCENTE, Permiso.REGISTRAR_ACCION_INMEDIATA, contexto, AHORA).resultado());
         assertTrue(politica.evaluar(DOCENTE, Permiso.ACLARAR_APORTE_PROPIO, contexto, AHORA).permitida());
         assertEquals(2, atendido.revisiones().size());
     }
@@ -122,7 +122,7 @@ class PoliticaAccesoTest {
     }
 
     @Test
-    void accionCotidianaNoUsaLaCategoriaLeveDelAporteSiElHechoTieneClasificacionDiscrepante() {
+    void documentarAccionUrgentePropiaNoEsperaAResolverLaClasificacion() {
         var politica = politica(completo());
         var propio = reporte(100, DOCENTE, "Nota cotidiana ficticia", PapelParticipacion.TESTIGO);
         var datos = datos("Aporte de protección ficticio", PapelParticipacion.PRESUNTA_RESPONSABILIDAD);
@@ -134,13 +134,13 @@ class PoliticaAccesoTest {
         var hecho = Hecho.de(propio).vincularDuplicado(ajeno, cambio(DIRECTOR, 30));
         var contexto = ContextoAcceso.deAporte(hecho, propio.id());
 
-        assertEquals(PoliticaAcceso.Resultado.REPORTE_NO_DISPONIBLE,
-                politica.evaluar(DOCENTE, Permiso.REGISTRAR_ACCION_COTIDIANA, contexto, AHORA).resultado());
+        assertTrue(politica.evaluar(DOCENTE, Permiso.REGISTRAR_ACCION_INMEDIATA, contexto, AHORA).permitida());
         assertTrue(politica.evaluar(DOCENTE, Permiso.CONSULTAR_APORTE_PROPIO, contexto, AHORA).permitida());
         var precisado = hecho.precisarDatos(FechaHecho.exacta(LocalDate.of(2026, 10, 20)), grave.clasificacion(),
                 motivo(DIRECTOR, 40));
         var vigente = ContextoAcceso.deAporte(precisado, propio.id());
-        assertFalse(politica.evaluar(DOCENTE, Permiso.REGISTRAR_ACCION_COTIDIANA, vigente, AHORA).permitida());
+        assertEquals(PoliticaAcceso.Resultado.CORRECCION_TRAS_ATENCION,
+                politica.evaluar(DOCENTE, Permiso.REGISTRAR_ACCION_INMEDIATA, vigente, AHORA).resultado());
         assertTrue(politica.evaluar(DOCENTE, Permiso.ACLARAR_APORTE_PROPIO, vigente, AHORA).permitida());
     }
 

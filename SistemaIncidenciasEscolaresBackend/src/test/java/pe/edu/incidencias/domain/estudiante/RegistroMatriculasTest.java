@@ -289,10 +289,32 @@ class RegistroMatriculasTest {
     }
 
     @Test
+    void nombreConSoloEspaciosUnicodeEsErrorLocalizableSinCrearEstudiante() {
+        var original = registro();
+        var lote = lote(fila(7, "\u00a0", null), fila(8, "\u00a0", null));
+        var vista = original.previsualizar(lote, politica, aip, AHORA);
+        assertEquals(2, vista.cantidad(ERROR));
+        assertTrue(vista.filas().getFirst().avisos().getFirst().contains("Nombre"));
+        assertTrue(original.confirmar(vista, politica, cambio()).estudiantes().isEmpty());
+    }
+
+    @Test
     void nacimientoPosteriorALaMatriculaEsErrorSinAlta() {
         var fila = new FilaMatricula(7, UUID.randomUUID(), "Lucía", Optional.empty(), Optional.of(FECHA.plusDays(1)),
                 Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(1, registro().previsualizar(lote(fila), politica, aip, AHORA).cantidad(ERROR));
+    }
+
+    @Test
+    void nacimientoOmitidoNoPermiteCrearMatriculaAnteriorAlNacimientoConocido() {
+        var e = estudiante("Lucía", "12345678").incorporarIdentidad(Optional.empty(), Optional.empty(),
+                Optional.of(LocalDate.of(2014, 1, 1)), Optional.empty());
+        var fila = fila(7, "Lucía", "12345678");
+        var lote = lote(UUID.randomUUID(), 2013, LocalDate.of(2013, 3, 1), Optional.empty(), List.of(fila), Map.of());
+        var original = registro(e);
+        var vista = original.previsualizar(lote, politica, aip, AHORA);
+        assertEquals(1, vista.cantidad(ERROR));
+        assertSame(e, original.confirmar(vista, politica, cambio()).estudiantes().get(e.id()));
     }
 
     @Test
@@ -365,6 +387,9 @@ class RegistroMatriculasTest {
         assertThrows(SecurityException.class, () -> original.confirmar(vista, p, new RegistroCambio(otro, AHORA, Optional.empty())));
         var confirmado = original.confirmar(vista, p, cambio());
         assertThrows(SecurityException.class, () -> confirmado.previsualizar(lote, p, otro, AHORA));
+        var vistaDelOtro = original.previsualizar(lote, p, otro, AHORA);
+        assertThrows(SecurityException.class, () -> confirmado.confirmar(vistaDelOtro, p,
+                new RegistroCambio(otro, AHORA, Optional.empty())));
     }
 
     @Test

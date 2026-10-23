@@ -16,7 +16,9 @@ Thumbs.db
 *.xlsx
 *.xls
 
-# Solo se publica el README principal; el resto de Markdown queda local.
+# Documentación de requisitos y dominio necesaria para mantener el proyecto.
 *.[mM][dD]
 !/README.md
+!/SistemaIncidenciasEscolaresBackend/ERS_Incidencias_Escolares.md
+!/SistemaIncidenciasEscolaresBackend/docs/domain/IMPLEMENTACION_DOMAIN.md
 

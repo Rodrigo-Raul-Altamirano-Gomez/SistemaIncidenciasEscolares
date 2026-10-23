@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import static pe.edu.incidencias.domain.consulta.ConsultaEstadistica.Dimension.*;
 import static pe.edu.incidencias.domain.consulta.ConsultaEstadistica.Medida.*;
 import static pe.edu.incidencias.domain.consulta.ResultadoEstadistico.NO_INFORMADO;
+import static pe.edu.incidencias.domain.estudiante.BusquedaEstudiantes.normalizar;
 
 /** Motor puro sobre un ámbito cargado por aplicación. La completitud del ámbito no se deduce de una muestra. */
 public final class MotorEstadisticas {
@@ -79,8 +80,9 @@ public final class MotorEstadisticas {
                 (long) ids(seleccion.stream().filter(u -> !u.datos().containsKey(dimension)
                         || NO_INFORMADO.equals(u.datos().get(dimension))).toList()).size());
         long sinFecha = ids(unidades.stream().filter(u -> u.fecha().isEmpty()).toList()).size();
-        var fuentes = seleccion.stream().map(u -> u.contexto().ambito()).reduce(AmbitoReserva::unir);
-        var recursos = seleccion.stream().map(u -> UUID.fromString(u.id().substring(0, 36))).collect(Collectors.toSet());
+        // La cobertura también revela datos de las unidades fuera del filtro o período.
+        var fuentes = unidades.stream().map(u -> u.contexto().ambito()).reduce(AmbitoReserva::unir);
+        var recursos = unidades.stream().map(u -> UUID.fromString(u.id().substring(0, 36))).collect(Collectors.toSet());
         var advertencias = List.of("Ámbito autorizado cargado; no se infiere cobertura institucional completa.",
                 "Subtotales por grupos, papeles o categorías pueden no ser aditivos; cada total cuenta identidades únicas de su unidad.",
                 "NO_INFORMADO y DISCREPANTE no representan cero ni responsabilidad confirmada.",
@@ -173,7 +175,7 @@ public final class MotorEstadisticas {
         // Una cuenta sin rol no obtiene una estadística vacía que aparente autorización.
         var resultado = new ArrayList<Unidad>();
         for (var hecho : hechos.values()) {
-            var base = atomos(hecho, contextos.get(hecho.id()));
+            var base = atomos(hecho, contextos.get(hecho.id()), usuario, ahora);
             if (medida == HECHOS || medida == PARTICIPACIONES || medida.estudiantes()) {
                 for (var atomo : base) {
                     if (medida.estudiantes() && atomo.estudianteId().isEmpty()) continue;
@@ -197,7 +199,7 @@ public final class MotorEstadisticas {
                 if (!autorizado(usuario, contexto, ahora)) continue;
                 if (caso.ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("Caso posterior al corte");
                 var base = caso.hechosReservados().stream().map(atenciones::hechoVigente).distinct()
-                        .filter(h -> !h.anulado()).flatMap(h -> atomos(h, contexto).stream()).toList();
+                        .filter(h -> !h.anulado()).flatMap(h -> atomos(h, contexto, usuario, ahora).stream()).toList();
                 if (base.isEmpty()) base = List.of(new Unidad(caso.id().toString(), Optional.of(caso.fechaInicio()),
                         Map.of(ESTADO_ATENCION, caso.estado().name()), Optional.empty(), contexto));
                 if (medida.name().startsWith("CASOS")) {
@@ -220,7 +222,7 @@ public final class MotorEstadisticas {
                     }
             }
             for (var hecho : hechos.values()) for (var inmediata : atenciones.inmediatasDelHecho(hecho.id(), usuario, politica, ahora))
-                if (actuacionesVistas.add(inmediata.id())) agregarActuacion(resultado, atomos(hecho, contextos.get(hecho.id())), inmediata, medida, ahora);
+                if (actuacionesVistas.add(inmediata.id())) agregarActuacion(resultado, atomos(hecho, contextos.get(hecho.id()), usuario, ahora), inmediata, medida, ahora);
         }
         if (medida.name().startsWith("ALERTAS")) for (var alerta : alertas.alertas()) {
             if (!atenciones.proteccion().permiteRecurso(alerta.id(), ahora)) continue;
@@ -230,9 +232,10 @@ public final class MotorEstadisticas {
             if (!autorizado(usuario, contexto, ahora)) continue;
             if (medida == ALERTAS_PENDIENTES && !alerta.pendiente()) continue;
             if (medida == ALERTAS_GESTIONADAS && alerta.disposicion().isEmpty()) continue;
-            var motivos = alerta.revisiones().stream().flatMap(r -> r.fundamentos().values().stream())
-                    .flatMap(f -> f.motivos().stream()).distinct().toList();
-            var base = contexto.hechos().stream().filter(h -> !h.anulado()).flatMap(h -> atomos(h, contexto).stream()).toList();
+            var motivos = medida == ALERTAS_PENDIENTES ? List.copyOf(alerta.motivos())
+                    : alerta.revisiones().stream().flatMap(r -> r.fundamentos().values().stream())
+                            .flatMap(f -> f.motivos().stream()).distinct().toList();
+            var base = contexto.hechos().stream().filter(h -> !h.anulado()).flatMap(h -> atomos(h, contexto, usuario, ahora).stream()).toList();
             if (base.isEmpty()) base = List.of(new Unidad(alerta.id().toString(), fecha(alerta.creadaEn()), Map.of(), Optional.empty(), contexto));
             for (var atomo : base)
                 for (var motivo : motivos) resultado.add(evento(alerta.id().toString(), fecha(alerta.creadaEn()), atomo,
@@ -241,13 +244,18 @@ public final class MotorEstadisticas {
         return List.copyOf(resultado);
     }
 
-    private List<Unidad> atomos(Hecho hecho, ContextoAcceso contexto) {
+    private List<Unidad> atomos(Hecho hecho, ContextoAcceso contexto, UUID usuario, Instant ahora) {
         var resultado = new ArrayList<Unidad>();
         var fechaHecho = hecho.fechaVigente();
         var fecha = fechaHecho.map(FechaHecho::fecha);
         var clasificacion = hecho.clasificacionVigente();
         var anios = hecho.reportes().stream().filter(r -> !r.anulado()).map(r -> r.datos().anioEscolar()).distinct().toList();
-        var horas = hecho.reportes().stream().filter(r -> !r.anulado()).map(r -> r.datos().hora()).distinct().toList();
+        var horas = hecho.reportes().stream().filter(r -> !r.anulado()).flatMap(r -> r.datos().hora().stream()).distinct().toList();
+        var casos = atenciones.casos().stream().filter(c -> c.hechosReservados().stream()
+                        .map(atenciones::hechoCanonico).anyMatch(hecho.id()::equals))
+                .filter(c -> atenciones.casoDisponible(c.id(), ahora) && autorizado(usuario, atenciones.contexto(c.id()), ahora)).toList();
+        if (casos.stream().anyMatch(c -> c.ultimaModificacion().isAfter(ahora)))
+            throw new IllegalArgumentException("Caso posterior al corte");
         for (var participacion : hecho.participaciones()) {
             var datos = new EnumMap<ConsultaEstadistica.Dimension, String>(ConsultaEstadistica.Dimension.class);
             datos.put(ANIO_ESCOLAR, anios.size() == 1 ? anios.getFirst().toString() : NO_INFORMADO);
@@ -256,7 +264,7 @@ public final class MotorEstadisticas {
             temporal(datos, fecha);
             if (fechaHecho.filter(f -> !f.aproximada()).isPresent()) {
                 datos.put(DIA_SEMANA, fecha.orElseThrow().getDayOfWeek().name());
-                if (horas.size() == 1) horas.getFirst().ifPresent(h -> datos.put(HORA, Integer.toString(h.getHour())));
+                if (horas.size() == 1) datos.put(HORA, Integer.toString(horas.getFirst().getHour()));
             } else datos.remove(DIA_SEMANA);
             var persona = participacion.persona();
             datos.put(TIPO_PERSONA, persona.tipo().name());
@@ -267,8 +275,6 @@ public final class MotorEstadisticas {
             estudiante.flatMap(Estudiante::sexoInformado).ifPresent(s -> datos.put(SEXO, s));
             datos.put(GRADO, grupoHistorico(participacion, true));
             datos.put(SECCION, grupoHistorico(participacion, false));
-            var casos = atenciones.casos().stream().filter(c -> c.hechosReservados().stream()
-                    .map(atenciones::hechoCanonico).anyMatch(hecho.id()::equals)).toList();
             datos.put(ESTADO_ATENCION, casos.stream().anyMatch(c -> c.estado() == CasoAtencion.Estado.PENDIENTE)
                     ? "PENDIENTE" : casos.isEmpty() ? "SIN_ATENCION" : "CERRADA");
             datos.put(INTERVENCION_COMITE, casos.stream().anyMatch(c -> !c.intervencionesComite().isEmpty()) ? "SI" : "NO");
@@ -355,9 +361,11 @@ public final class MotorEstadisticas {
     }
 
     static String grupoHistorico(Hecho.ParticipacionConsolidada participacion, boolean grado) {
-        var valores = participacion.aportes().stream().map(a -> a.participacion().grupoHistorico()
-                .flatMap(g -> grado ? g.grado() : g.seccion())).distinct().toList();
-        return valores.size() == 1 ? valores.getFirst().orElse(NO_INFORMADO) : "DISCREPANTE";
+        var valores = new LinkedHashMap<String, String>();
+        for (var aporte : participacion.aportes()) aporte.participacion().grupoHistorico()
+                .flatMap(g -> grado ? g.grado() : g.seccion()).ifPresent(v -> valores.putIfAbsent(normalizar(v), v));
+        if (valores.isEmpty()) return NO_INFORMADO;
+        return valores.size() == 1 ? valores.values().iterator().next() : "DISCREPANTE";
     }
     private boolean autorizado(UUID usuario, ContextoAcceso contexto, Instant ahora) {
         return atenciones.proteccion().permite(contexto, ahora)

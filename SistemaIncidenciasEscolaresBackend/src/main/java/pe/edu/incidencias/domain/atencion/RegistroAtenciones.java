@@ -4,6 +4,8 @@ import pe.edu.incidencias.domain.acceso.*;
 import pe.edu.incidencias.domain.incidencia.Hecho;
 import pe.edu.incidencias.domain.incidencia.RegistroCambio;
 import pe.edu.incidencias.domain.incidencia.ReporteIncidencia;
+import pe.edu.incidencias.domain.catalogo.Gravedad;
+import pe.edu.incidencias.domain.catalogo.NaturalezaCategoria;
 import pe.edu.incidencias.domain.proteccion.ControlProteccion;
 
 import java.time.Instant;
@@ -21,6 +23,17 @@ import java.util.UUID;
 
 /** Colección de dominio: aplica invariantes entre atenciones y devuelve otro estado, sin persistencia ni casos de uso. */
 public final class RegistroAtenciones {
+    public record CompromisoPropio(UUID id, List<Compromiso.Revision> revisionesPropias) {
+        public CompromisoPropio { revisionesPropias = List.copyOf(revisionesPropias); }
+    }
+    public record RevisionPropia(Actuacion.Estado estado, String relato, Optional<LocalDate> fechaPrevista,
+                                 Optional<LocalDate> fechaEfectiva, List<CompromisoPropio> compromisos,
+                                 RegistroCambio cambio) {
+        public RevisionPropia { compromisos = List.copyOf(compromisos); }
+    }
+    public record AccionInmediataPropia(UUID id, UUID responsableId, List<RevisionPropia> revisionesPropias) {
+        public AccionInmediataPropia { revisionesPropias = List.copyOf(revisionesPropias); }
+    }
     public record Duplicidad(Hecho origen, UUID principalId, Optional<UUID> casoContinuidad,
                               Set<UUID> antecedentesGenerados, RegistroCambio registro, Optional<RegistroCambio> correccion) {
         public Duplicidad { antecedentesGenerados = Set.copyOf(antecedentesGenerados); }
@@ -44,6 +57,7 @@ public final class RegistroAtenciones {
     private final List<Duplicidad> duplicidades;
     private final Indice indice;
     private final ControlProteccion proteccion;
+    private final ControlProteccion proteccionEfectiva;
 
     private RegistroAtenciones(Map<UUID, Hecho> hechos, Map<UUID, CasoAtencion> casos,
                                Map<UUID, List<Actuacion>> inmediatas, RestriccionesAmbito restricciones) {
@@ -88,6 +102,7 @@ public final class RegistroAtenciones {
             }
         }
         this.indice = new Indice(reservas, pendientes);
+        this.proteccionEfectiva = calcularProteccion();
     }
 
     private RegistroAtenciones copiarEstado(Map<UUID, Hecho> hechos, Map<UUID, CasoAtencion> casos,
@@ -157,12 +172,17 @@ public final class RegistroAtenciones {
     public List<CasoAtencion> casos() { return casos.values().stream().sorted(java.util.Comparator.comparing(c -> c.id().toString())).toList(); }
     public Optional<CasoAtencion> caso(UUID id) { return Optional.ofNullable(casos.get(id)); }
     public RestriccionesAmbito restricciones() { return restricciones; }
-    public ControlProteccion proteccion() {
+    public ControlProteccion proteccion() { return proteccionEfectiva; }
+
+    private ControlProteccion calcularProteccion() {
         var recursos = new LinkedHashMap<UUID, AmbitoReserva>();
         var personas = new LinkedHashMap<UUID, AmbitoReserva>();
         for (var caso : casos()) {
             var ambito = contexto(caso.id()).ambito();
             caso.derivaciones().forEach(d -> recursos.merge(d.id(), ambito, AmbitoReserva::unir));
+            caso.convocatorias().forEach(c -> recursos.merge(c.id(), ambito, AmbitoReserva::unir));
+            caso.intervencionesComite().forEach(i -> recursos.merge(i.id(), ambito, AmbitoReserva::unir));
+            caso.decisionesComite().forEach(d -> recursos.merge(d.id(), ambito, AmbitoReserva::unir));
             for (var accion : caso.actuaciones()) relacionarProteccion(accion, ambito, recursos, personas);
         }
         inmediatas.forEach((reporte, acciones) -> {
@@ -380,8 +400,6 @@ public final class RegistroAtenciones {
         for (var actuacion : List.copyOf(actuaciones)) {
             if (!ids.add(actuacion.id())) throw new IllegalArgumentException("Actuación repetida en la intervención");
             validarIdentidadesActuacion(actuacion, Optional.of(casoId));
-            if (!actuacion.revisiones().getLast().cambio().autorId().equals(cambio.autorId()))
-                throw new IllegalArgumentException("La actuación formal conserva al operador real");
             nuevo = nuevo.registrarActuacion(actuacion, cambio);
             validarFechaActo(nuevo, intervencionId, actuacion.fechaEfectiva());
             nuevo = nuevo.registrarActoComite(acto(ActoComite.Tipo.ACTUACION, actuacion.id(), intervencionId, formal, cambio), cambio);
@@ -406,8 +424,6 @@ public final class RegistroAtenciones {
                                                        Optional<String> motivoSustitucion, DirectorioUsuarios directorio, RegistroCambio cambio) {
         var formal = autorizarFormal(casoId, motivoSustitucion, directorio, cambio);
         validarIdentidadesActuacion(actuacion, Optional.of(casoId));
-        if (!actuacion.revisiones().getLast().cambio().autorId().equals(cambio.autorId()))
-            throw new IllegalArgumentException("La revisión formal conserva al operador real");
         var nuevo = requerirCaso(casoId).registrarActuacion(actuacion, cambio);
         validarFechaActo(nuevo, intervencionId, actuacion.fechaEfectiva());
         return guardar(nuevo.registrarActoComite(acto(ActoComite.Tipo.ACTUACION, actuacion.id(), intervencionId, formal, cambio), cambio), formal.restricciones(), cambio);
@@ -418,8 +434,6 @@ public final class RegistroAtenciones {
         var formal = autorizarFormal(casoId, motivoSustitucion, directorio, cambio);
         if (casos().stream().filter(c -> !c.id().equals(casoId)).flatMap(c -> c.derivaciones().stream()).anyMatch(d -> d.id().equals(derivacion.id())))
             throw new IllegalArgumentException("La misma derivación no se copia a otro caso");
-        if (!derivacion.revisiones().getLast().cambio().autorId().equals(cambio.autorId()))
-            throw new IllegalArgumentException("La revisión formal conserva al operador real");
         var anterior = requerirCaso(casoId);
         var nuevo = anterior.registrarDerivacion(derivacion, cambio, this::hechoCanonico);
         validarFechaActo(nuevo, intervencionId, derivacion.fechaEfectiva());
@@ -593,8 +607,9 @@ public final class RegistroAtenciones {
         var hecho = hechoDeReporte(reporteId);
         var contexto = contextoDeHecho(hecho.id(), Optional.of(reporteId));
         var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
-        PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACCION_COTIDIANA, contexto, cambio.fecha()));
+        PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACCION_INMEDIATA, contexto, cambio.fecha()));
         if (actuacion.estado() != Actuacion.Estado.REALIZADA) throw new IllegalArgumentException("La acción inmediata ya debe estar realizada");
+        validarCompromisosInmediatos(hecho, actuacion);
         if (!actuacion.hechosIds().isEmpty() && !actuacion.hechosIds().equals(Set.of(hecho.id())))
             throw new IllegalArgumentException("La acción inmediata no incorpora otros hechos");
         validarIdentidadesActuacion(actuacion, Optional.empty());
@@ -611,8 +626,9 @@ public final class RegistroAtenciones {
                 .anyMatch(c -> compromisos.contains(c.id()))) throw new IllegalArgumentException("Un compromiso no se copia a otra actuación");
         var contexto = contextoDeHecho(hechoDeReporte(reporteId).id(), Optional.of(reporteId));
         var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
-        var permisoPropio = politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACCION_COTIDIANA, contexto, cambio.fecha());
+        var permisoPropio = politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_ACCION_INMEDIATA, contexto, cambio.fecha());
         if (!permisoPropio.permitida()) PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.ATENDER, contexto, cambio.fecha()));
+        if (permisoPropio.permitida()) validarCompromisosInmediatos(hechoDeReporte(reporteId), actualizada);
         return guardarInmediata(reporteId, actualizada, politica.restriccionesActualizadas(contexto, cambio.fecha()), cambio);
     }
 
@@ -620,6 +636,23 @@ public final class RegistroAtenciones {
         if (requerirCaso(casoId).ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("El caso contiene cambios posteriores al instante de consulta");
         PoliticaAcceso.exigir(new PoliticaAcceso(directorio, restricciones, proteccion()).evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto(casoId), ahora));
         return requerirCaso(casoId);
+    }
+
+    /** La lectura del aporte propio sigue disponible tras la atención; no proyecta revisiones institucionales. */
+    public List<AccionInmediataPropia> inmediatasDelAutor(UUID reporteId, UUID usuarioId, DirectorioUsuarios directorio, Instant ahora) {
+        var contexto = contextoDeHecho(hechoDeReporte(reporteId).id(), Optional.of(reporteId));
+        var politica = new PoliticaAcceso(directorio, restricciones, proteccion());
+        PoliticaAcceso.exigir(politica.evaluar(usuarioId, Permiso.CONSULTAR_APORTE_PROPIO, contexto, ahora));
+        var acciones = inmediatas.getOrDefault(reporteId, List.of());
+        if (acciones.stream().anyMatch(a -> a.ultimaModificacion().isAfter(ahora)))
+            throw new IllegalArgumentException("La actuación contiene cambios futuros");
+        return acciones.stream().map(a -> new AccionInmediataPropia(a.id(), a.responsableId(), a.revisiones().stream()
+                .filter(r -> r.cambio().autorId().equals(usuarioId))
+                .map(r -> new RevisionPropia(r.estado(), r.relato(), r.fechaPrevista(), r.fechaEfectiva(), r.compromisos().stream()
+                        .map(c -> new CompromisoPropio(c.id(), c.revisiones().stream()
+                                .filter(v -> v.cambio().autorId().equals(usuarioId)).toList()))
+                        .filter(c -> !c.revisionesPropias().isEmpty()).toList(), r.cambio())).toList()))
+                .filter(a -> !a.revisionesPropias().isEmpty()).toList();
     }
 
     /** Referencias a acciones inmediatas y propias: una acción conserva un único ID y una sola ocurrencia. */
@@ -630,16 +663,20 @@ public final class RegistroAtenciones {
         var caso = requerirCaso(casoId);
         if (caso.ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("El caso contiene cambios futuros");
         PoliticaAcceso.exigir(politicaActual.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto(casoId), ahora));
+        if (restricciones.estaExcluido(usuarioId, contexto(casoId).ambito())) throw new SecurityException("Usuario excluido del ámbito");
         if (!proteccion().permite(contexto(casoId), ahora)) throw new SecurityException("Ámbito con bloqueo jurídico");
         var resultado = new LinkedHashMap<UUID, Actuacion>();
         caso.actuaciones().forEach(a -> resultado.put(a.id(), a));
         for (var hechoId : caso.hechosReservados()) for (var reporte : hechoVigente(hechoId).reportes())
             inmediatas.getOrDefault(reporte.id(), List.of()).forEach(a -> resultado.put(a.id(), a));
+        if (resultado.values().stream().anyMatch(a -> a.ultimaModificacion().isAfter(ahora)))
+            throw new IllegalArgumentException("La actuación contiene cambios futuros");
         return resultado.values().stream().sorted(java.util.Comparator.comparing(a -> a.id().toString())).toList();
     }
 
     public List<Actuacion> inmediatasDelHecho(UUID hechoId, UUID usuarioId, PoliticaAcceso politicaActual, Instant ahora) {
         PoliticaAcceso.exigir(politicaActual.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contextoDeHechos(Set.of(hechoId)), ahora));
+        if (restricciones.estaExcluido(usuarioId, contextoDeHechos(Set.of(hechoId)).ambito())) throw new SecurityException("Usuario excluido del ámbito");
         if (!proteccion().permite(contextoDeHechos(Set.of(hechoId)), ahora)) throw new SecurityException("Ámbito con bloqueo jurídico");
         var resultado = hechoVigente(hechoId).reportes().stream().flatMap(r -> inmediatas.getOrDefault(r.id(), List.of()).stream())
                 .distinct().sorted(java.util.Comparator.comparing(Actuacion::id)).toList();
@@ -746,6 +783,16 @@ public final class RegistroAtenciones {
             throw new IllegalArgumentException("El acto formal no precede a la intervención efectiva");
     }
     private RegistroAtenciones guardar(CasoAtencion candidato, RestriccionesAmbito actuales, RegistroCambio cambio) {
+        var anterior = casos.get(candidato.id());
+        for (var actuacion : candidato.actuaciones()) {
+            var previa = anterior == null ? Optional.<Actuacion>empty() : anterior.actuaciones().stream().filter(a -> a.id().equals(actuacion.id())).findFirst();
+            validarAutoriasActuacion(actuacion, previa, cambio);
+        }
+        for (var derivacion : candidato.derivaciones()) {
+            var previa = anterior == null ? Optional.<Derivacion>empty() : anterior.derivaciones().stream().filter(d -> d.id().equals(derivacion.id())).findFirst();
+            int conservadas = previa.map(d -> d.revisiones().size()).orElse(0);
+            derivacion.revisiones().stream().skip(conservadas).forEach(r -> validarAutorRegistro(r.cambio(), cambio));
+        }
         var nuevos = new LinkedHashMap<>(casos);
         nuevos.put(candidato.id(), concluirContinuidadSiCorresponde(candidato, inmediatas, cambio));
         validarPendientes(nuevos, inmediatas);
@@ -762,6 +809,8 @@ public final class RegistroAtenciones {
     }
     private RegistroAtenciones guardarInmediata(UUID reporteId, Actuacion actuacion, RestriccionesAmbito actuales, RegistroCambio cambio) {
         if (actuacion.ultimaModificacion().isAfter(cambio.fecha())) throw new IllegalArgumentException("La acción es posterior al guardado");
+        var anterior = inmediatas.getOrDefault(reporteId, List.of()).stream().filter(a -> a.id().equals(actuacion.id())).findFirst();
+        validarAutoriasActuacion(actuacion, anterior, cambio);
         var acciones = new LinkedHashMap<>(inmediatas);
         var lista = new ArrayList<>(acciones.getOrDefault(reporteId, List.of()));
         lista.removeIf(a -> a.id().equals(actuacion.id()));
@@ -774,6 +823,31 @@ public final class RegistroAtenciones {
         if (!resultado.proteccion().permite(resultado.contextoDeHechos(Set.of(hechoDeReporte(reporteId).id())), cambio.fecha()))
             throw new SecurityException("La acción propuesta incorpora datos bloqueados");
         return resultado;
+    }
+    private static void validarCompromisosInmediatos(Hecho hecho, Actuacion actuacion) {
+        boolean cotidiana = hecho.clasificacionVigente().filter(c -> c.naturaleza() == NaturalezaCategoria.CONDUCTA_DISCIPLINARIA
+                && c.gravedad() == Gravedad.LEVE).isPresent();
+        if (!cotidiana && !actuacion.compromisos().isEmpty())
+            throw new IllegalArgumentException("La protección inmediata no incorpora acuerdos de atención formal");
+    }
+
+    private static void validarAutoriasActuacion(Actuacion actual, Optional<Actuacion> anterior, RegistroCambio guardado) {
+        var compromisos = new LinkedHashMap<UUID, Compromiso>();
+        anterior.ifPresent(a -> a.compromisos().forEach(c -> compromisos.put(c.id(), c)));
+        int conservadas = anterior.map(a -> a.revisiones().size()).orElse(0);
+        for (var revision : actual.revisiones().subList(conservadas, actual.revisiones().size())) {
+            validarAutorRegistro(revision.cambio(), guardado);
+            for (var compromiso : revision.compromisos()) {
+                var previo = compromisos.put(compromiso.id(), compromiso);
+                int conocidas = previo == null ? 0 : previo.revisiones().size();
+                compromiso.revisiones().stream().skip(conocidas).forEach(r -> validarAutorRegistro(r.cambio(), guardado));
+            }
+        }
+    }
+
+    private static void validarAutorRegistro(RegistroCambio registro, RegistroCambio guardado) {
+        if (!registro.autorId().equals(guardado.autorId()) || registro.fecha().isAfter(guardado.fecha()))
+            throw new IllegalArgumentException("Los registros nuevos conservan al operador real y no pueden ser futuros");
     }
     private CasoAtencion concluirContinuidadSiCorresponde(CasoAtencion caso, Map<UUID, List<Actuacion>> acciones, RegistroCambio cambio) {
         if (caso.estado() != CasoAtencion.Estado.PENDIENTE || !caso.hechosActuales().isEmpty()

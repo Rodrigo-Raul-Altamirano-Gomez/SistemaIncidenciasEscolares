@@ -64,7 +64,7 @@ public final class MatriculaAnual {
         }
         var existente = historialGrupos.get(fechaEfectiva);
         if (existente != null && existente.isPresent()) {
-            if (existente.equals(grupo)) {
+            if (existente.orElseThrow().equivalenteA(grupo.orElseThrow())) {
                 return this;
             }
             throw new IllegalArgumentException("Ya existe otro grupo para esa fecha; requiere rectificación explícita.");

@@ -26,6 +26,9 @@ public final class Estudiante {
         this.sexoInformado = Objects.requireNonNull(sexoInformado, "sexoInformado")
                 .map(valor -> textoObligatorio(valor, "sexoInformado"));
         this.matriculas = Map.copyOf(matriculas);
+        if (fechaNacimiento.filter(nacimiento -> this.matriculas.values().stream()
+                .anyMatch(matricula -> nacimiento.isAfter(matricula.historialGrupos().firstKey()))).isPresent())
+            throw new IllegalArgumentException("El nacimiento no puede ser posterior a una matrícula registrada");
     }
 
     public static Estudiante crear(UUID id, String nombreCompleto) {
@@ -143,7 +146,7 @@ public final class Estudiante {
 
     private static String textoObligatorio(String valor, String campo) {
         Objects.requireNonNull(valor, campo);
-        if (valor.isBlank()) {
+        if (BusquedaEstudiantes.normalizar(valor).isBlank()) {
             throw new IllegalArgumentException(campo + " no puede estar vacío.");
         }
         return valor.strip();

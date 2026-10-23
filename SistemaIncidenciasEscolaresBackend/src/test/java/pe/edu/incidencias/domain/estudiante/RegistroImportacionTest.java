@@ -309,6 +309,63 @@ class RegistroImportacionTest {
     }
 
     @Test
+    void grupoNoAdmitidoEsErrorDeFilaYNoImpideConfirmarLasDemas() {
+        var invalida = new FilaMatricula(7, UUID.randomUUID(), "Primera", Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(new GrupoEscolar("Décimo", "Z")), Optional.empty());
+        var valida = fila(8, "Segunda", "87654321");
+        var lote = new LoteImportacion(matricula(List.of(invalida, valida)), alcance,
+                Map.of(7, new LoteImportacion.FilaContexto(Map.of("salud", no()), Set.of())));
+        var original = registro();
+        var config = configuracion(alcance);
+        var vista = original.previsualizar(lote, config, politica, aip, AHORA);
+        assertEquals(RegistroMatriculas.Estado.ERROR, vista.filas().getFirst().matricula().estado());
+        assertTrue(vista.filas().getFirst().matricula().avisos().getFirst().contains("Grupo"));
+        var guardado = original.confirmar(vista, config, politica, cambio());
+        assertFalse(guardado.matriculas().estudiantes().containsKey(invalida.identidadParaAlta()));
+        assertFalse(guardado.contextos().containsKey(invalida.identidadParaAlta()));
+        assertTrue(guardado.matriculas().estudiantes().containsKey(valida.identidadParaAlta()));
+    }
+
+    @Test
+    void filaExcluidaNoBloqueaLotePorGrupoNoAdmitido() {
+        var f = new FilaMatricula(7, UUID.randomUUID(), "Excluida", Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(new GrupoEscolar("Décimo", "Z")), Optional.empty());
+        var m = matricula(List.of(f, fila(8, "Segunda", "87654321")));
+        var lote = new LoteImportacion(new LoteMatricula(m.id(), m.procedencia(), m.hoja(), m.anio(),
+                m.fechaEfectiva(), m.grupoComun(), m.filas(), Map.of(7, LoteMatricula.Resolucion.excluir())), alcance, Map.of());
+        var original = registro();
+        var config = configuracion(alcance);
+        var vista = original.previsualizar(lote, config, politica, aip, AHORA);
+        assertEquals(RegistroMatriculas.Estado.EXCLUIDA, vista.filas().getFirst().matricula().estado());
+        assertEquals(1, original.confirmar(vista, config, politica, cambio()).matriculas().estudiantes().size());
+    }
+
+    @Test
+    void grupoRetiradoDespuesDePrevisualizarImpideConfirmarLaFilaAceptada() {
+        var f = new FilaMatricula(7, UUID.randomUUID(), "Primera", Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(A), Optional.empty());
+        var lote = lote(f, Map.of());
+        var original = registro();
+        var config = configuracion(alcance);
+        var vista = original.previsualizar(lote, config, politica, aip, AHORA);
+        var sinGrupo = config.definirGrupos(2026, Set.of(B), politica, new RegistroCambio(admin, AHORA, Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> original.confirmar(vista, sinGrupo, politica, cambio()));
+        assertTrue(original.matriculas().estudiantes().isEmpty());
+    }
+
+    @Test
+    void contextoInvalidoNoOcultaDniRepetidoDeOtraFila() {
+        var primera = fila(7, "Primera", "12345678");
+        var segunda = fila(8, "Segunda", "12345678");
+        var lote = new LoteImportacion(matricula(List.of(primera, segunda)), alcance,
+                Map.of(7, new LoteImportacion.FilaContexto(Map.of("salud", new LoteImportacion.Texto("Incorrecto")), Set.of())));
+        var original = registro();
+        var vista = original.previsualizar(lote, configuracion(alcance), politica, aip, AHORA);
+        assertTrue(vista.filas().stream().allMatch(f -> f.matricula().estado() == RegistroMatriculas.Estado.ERROR));
+        assertTrue(original.confirmar(vista, configuracion(alcance), politica, cambio()).matriculas().estudiantes().isEmpty());
+    }
+
+    @Test
     void noPermiteReusarIdConfirmadoSoloComoMatriculaParaAgregarContexto() {
         var fila = fila(7, "Lucía", null);
         var lote = lote(fila, Map.of());

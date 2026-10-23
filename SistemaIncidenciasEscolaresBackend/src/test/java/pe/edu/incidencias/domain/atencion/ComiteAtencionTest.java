@@ -134,7 +134,9 @@ class ComiteAtencionTest {
     }
 
     @Test void atencionIndividualDelMiembroPermaneceEquivalenteYSeDistingueDelActoFormal() {
-        var registro = intervenido().registrarActuacion(id(200), realizada(300, List.of(), 130), directorio(), autor(COMITE, 130));
+        var individual = Actuacion.realizada(id(300), "Atención individual del miembro", HOY, COMITE,
+                Set.of(), Set.of(), List.of(), autor(COMITE, 130));
+        var registro = intervenido().registrarActuacion(id(200), individual, directorio(), autor(COMITE, 130));
         assertEquals(1, registro.caso(id(200)).orElseThrow().actuaciones().size());
         assertTrue(registro.caso(id(200)).orElseThrow().actosComite().isEmpty());
         assertNotNull(registro.consultarCaso(id(200), COMITE, directorio(), reloj(140)));

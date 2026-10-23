@@ -57,6 +57,9 @@ public final class Categoria {
         if (revision.fecha().isBefore(actual().fecha())) {
             throw new IllegalArgumentException("La fecha de cambio no puede preceder la revisión vigente");
         }
+        if (revision.definicion().equals(actual().definicion()) && revision.activa() == activa()) {
+            return this;
+        }
         List<RevisionCategoria> historia = new ArrayList<>(revisiones);
         historia.add(revision);
         return new Categoria(id, historia);

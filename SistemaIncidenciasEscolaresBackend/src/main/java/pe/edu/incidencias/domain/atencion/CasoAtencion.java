@@ -100,6 +100,7 @@ public final class CasoAtencion {
                     || a.hechosIds().isEmpty() && a.revisiones().stream().anyMatch(r -> vinculadoEn(hecho, r.cambio().fecha())))
                     || derivaciones().stream().anyMatch(d -> d.hechosIds().contains(hecho))
                     || convocatorias.stream().anyMatch(c -> vinculadoEn(hecho, c.registro().fecha()))
+                    || cierres.stream().anyMatch(c -> contieneConclusion(c) && vinculadoEn(hecho, c.cambio().fecha()))
                     || continuidades.stream().anyMatch(c -> c.correccion().isEmpty() && c.hechosIds().contains(hecho));
             if (contenido) resultado.add(hecho);
         }
@@ -236,7 +237,13 @@ public final class CasoAtencion {
     boolean tieneContenidoDesde(Instant desde) {
         return actuaciones().stream().anyMatch(a -> !a.ultimaModificacion().isBefore(desde))
                 || derivaciones().stream().anyMatch(d -> !d.ultimaModificacion().isBefore(desde))
-                || convocatorias.stream().anyMatch(c -> !c.registro().fecha().isBefore(desde));
+                || convocatorias.stream().anyMatch(c -> !c.registro().fecha().isBefore(desde))
+                || cierres.stream().anyMatch(c -> contieneConclusion(c) && !c.cambio().fecha().isBefore(desde));
+    }
+
+    private static boolean contieneConclusion(RevisionCierre revision) {
+        return revision.cierre().filter(c -> c.tipo() == CierreLocal.TipoCierre.CONCLUSION
+                || c.tipo() == CierreLocal.TipoCierre.DERIVACION_FAMILIAR_FISCALIA).isPresent();
     }
 
     CasoAtencion corregirRelacionDuplicada(UUID origen, Set<UUID> antecedentesGenerados, RegistroCambio relacion, RegistroCambio cambio) {

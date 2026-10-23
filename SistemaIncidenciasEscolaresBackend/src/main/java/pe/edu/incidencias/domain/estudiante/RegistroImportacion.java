@@ -148,10 +148,22 @@ public final class RegistroImportacion {
     public Previsualizacion previsualizar(LoteImportacion lote, ConfiguracionInstitucional configuracion,
                                           PoliticaAcceso politica, UUID autor, Instant fecha) {
         validarConfiguracion(lote, configuracion, fecha);
-        return previsualizar(lote, politica, autor, fecha);
+        var erroresGrupo = new HashMap<Integer, String>();
+        for (var fila : lote.matricula().filas()) {
+            var resolucion = lote.matricula().resoluciones().get(fila.numero());
+            if (resolucion != null && resolucion.accion() == LoteMatricula.Accion.EXCLUIR) continue;
+            if (!configuracion.admiteGrupo(lote.matricula().anio(), fila.grupo()))
+                erroresGrupo.put(fila.numero(), "Grupo no admitido para el año; corrija o excluya la fila");
+        }
+        return previsualizar(lote, politica, autor, fecha, erroresGrupo);
     }
 
     Previsualizacion previsualizar(LoteImportacion lote, PoliticaAcceso politica, UUID autor, Instant fecha) {
+        return previsualizar(lote, politica, autor, fecha, Map.of());
+    }
+
+    private Previsualizacion previsualizar(LoteImportacion lote, PoliticaAcceso politica, UUID autor, Instant fecha,
+                                           Map<Integer, String> erroresGrupo) {
         autorizar(politica, autor, fecha);
         Objects.requireNonNull(lote, "lote");
         var previa = confirmaciones.get(lote.matricula().id());
@@ -164,20 +176,21 @@ public final class RegistroImportacion {
         if (matriculas.confirmaciones().containsKey(lote.matricula().id()))
             throw new IllegalArgumentException("ID ya usado por matrícula sin contexto; utilice un nuevo lote");
         var errores = new HashMap<Integer, List<String>>();
-        var resoluciones = new HashMap<>(lote.matricula().resoluciones());
+        var erroresFila = new HashMap<Integer, List<String>>();
+        erroresGrupo.forEach((fila, mensaje) -> erroresFila.put(fila, List.of(mensaje)));
         for (var fila : lote.contexto().entrySet()) {
-            if (Optional.ofNullable(resoluciones.get(fila.getKey()))
+            if (Optional.ofNullable(lote.matricula().resoluciones().get(fila.getKey()))
                     .filter(r -> r.accion() == LoteMatricula.Accion.EXCLUIR).isPresent()) continue;
             var problemas = validar(lote.alcance(), fila.getValue());
             if (!problemas.isEmpty()) {
                 errores.put(fila.getKey(), problemas);
-                resoluciones.put(fila.getKey(), LoteMatricula.Resolucion.excluir());
+                var todos = new ArrayList<>(erroresFila.getOrDefault(fila.getKey(), List.of()));
+                todos.addAll(problemas);
+                erroresFila.put(fila.getKey(), List.copyOf(todos));
             }
         }
         var m = lote.matricula();
-        var filtrado = new LoteMatricula(m.id(), m.procedencia(), m.hoja(), m.anio(), m.fechaEfectiva(),
-                m.grupoComun(), m.filas(), resoluciones, m.rectificaciones());
-        var propuesta = matriculas.previsualizar(filtrado, politica, autor, fecha);
+        var propuesta = matriculas.previsualizar(m, politica, autor, fecha, erroresFila);
         var filas = new ArrayList<ResultadoFila>();
         for (var resultado : propuesta.filas()) {
             var cambios = new ArrayList<CambioContexto>();
@@ -194,7 +207,15 @@ public final class RegistroImportacion {
 
     public RegistroImportacion confirmar(Previsualizacion propuesta, ConfiguracionInstitucional configuracion,
                                           PoliticaAcceso politica, RegistroCambio cambio) {
+        Objects.requireNonNull(propuesta, "propuesta");
+        Objects.requireNonNull(cambio, "cambio");
         validarConfiguracion(propuesta.lote, configuracion, cambio.fecha());
+        var aceptadas = propuesta.filas.stream().filter(ResultadoFila::aceptable)
+                .map(f -> f.matricula().fila()).collect(java.util.stream.Collectors.toSet());
+        for (var fila : propuesta.lote.matricula().filas()) {
+            if (aceptadas.contains(fila.numero()) && !configuracion.admiteGrupo(propuesta.lote.matricula().anio(), fila.grupo()))
+                throw new IllegalArgumentException("El grupo de la fila " + fila.numero() + " ya no está admitido; vuelva a revisar");
+        }
         return confirmar(propuesta, politica, cambio);
     }
 
@@ -279,10 +300,6 @@ public final class RegistroImportacion {
             throw new IllegalArgumentException("El alcance del lote no es el institucional vigente; revise las asociaciones");
         if (!configuracion.admiteGrupo(lote.matricula().anio(), lote.matricula().grupoComun()))
             throw new IllegalArgumentException("Grupo común no admitido para el año");
-        for (var fila : lote.matricula().filas()) {
-            if (!configuracion.admiteGrupo(lote.matricula().anio(), fila.grupo()))
-                throw new IllegalArgumentException("Grupo no admitido en fila " + fila.numero());
-        }
     }
 
     private void autorizar(PoliticaAcceso politica, UUID autor, Instant fecha) {

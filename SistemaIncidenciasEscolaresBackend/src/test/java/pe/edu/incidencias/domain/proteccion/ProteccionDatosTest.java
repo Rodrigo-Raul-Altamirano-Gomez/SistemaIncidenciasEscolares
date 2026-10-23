@@ -64,7 +64,9 @@ class ProteccionDatosTest {
                 alcance(), T.plusSeconds(10), directorio()));
         assertThrows(SecurityException.class, () -> autorizacion(alcance()).exigir(ADMIN, AutorizacionProteccion.Operacion.DISPONER,
                 alcance(), T.plusSeconds(1000), directorio()));
-        var inactivo = directorio().desactivarUsuario(ADMIN, cambio(2));
+        var inactivo = directorio().registrarUsuario(id(99), "Administrador de respaldo", "respaldo", cambio(1))
+                .asignarRol(id(99), id(199), RolUsuario.ADMINISTRADOR_OPERATIVO,
+                        new Vigencia(T, Optional.empty()), cambio(1)).desactivarUsuario(ADMIN, cambio(2));
         assertThrows(SecurityException.class, () -> autorizacion(alcance()).exigir(ADMIN, AutorizacionProteccion.Operacion.DISPONER,
                 alcance(), T.plusSeconds(10), inactivo));
     }
@@ -151,6 +153,21 @@ class ProteccionDatosTest {
         var x = r.extraer(id(102), new RegistroEvidencia.Filtro(T, T.plusSeconds(10), Optional.empty(), Set.of()), alcance(),
                 autorizacion(alcance()), cambio(20), directorio(), RestriccionesAmbito.vacias(), control);
         assertTrue(x.eventos().isEmpty());
+    }
+    @Test void bloqueoDelIdDeEvidenciaImpideSuExtraccionAunqueLasFuentesSeanDisponibles() {
+        var evento = evento(1, T.plusSeconds(1), RegistroEvidencia.Operacion.CONSULTA);
+        var r = RegistroEvidencia.vacio().registrar(evento);
+        var alcanceEvento = new AlcanceProteccion(Optional.empty(), Set.of(), Set.of(evento.id()));
+        var control = ControlProteccion.vacio().bloquear(id(4), alcanceEvento, autorizacion(alcanceEvento), cambio(10), directorio());
+        var x = r.extraer(id(102), new RegistroEvidencia.Filtro(T, T.plusSeconds(10), Optional.empty(), Set.of()), alcance(),
+                autorizacion(alcance()), cambio(20), directorio(), RestriccionesAmbito.vacias(), control);
+        assertTrue(x.eventos().isEmpty());
+    }
+    @Test void criteriosNoPuedenOcultarPersonasFueraDelAlcanceAutorizable() {
+        var criterios = new RegistroEvidencia.Criterios(Optional.empty(), Optional.empty(), Optional.empty(), Set.of(), Set.of(id(99)));
+        assertThrows(IllegalArgumentException.class, () -> new RegistroEvidencia.Evento(id(101), ADMIN, T,
+                RegistroEvidencia.Operacion.CONSULTA, RegistroEvidencia.Resultado.CORRECTO,
+                alcance(), criterios, Optional.empty()));
     }
     @Test void evidenciaRechazaIdDuplicadoYRetrocesoTemporal() {
         var r = RegistroEvidencia.vacio().registrar(evento(1, T.plusSeconds(2), RegistroEvidencia.Operacion.CONSULTA));

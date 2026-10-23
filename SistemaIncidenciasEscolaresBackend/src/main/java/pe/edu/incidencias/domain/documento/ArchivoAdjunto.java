@@ -9,7 +9,8 @@ public record ArchivoAdjunto(UUID id, String nombre, String tipoMime, long bytes
     public static final long MAXIMO_BYTES = 10_000_000L;
     public ArchivoAdjunto {
         Objects.requireNonNull(id);
-        if (nombre == null || nombre.isBlank() || nombre.contains("/") || nombre.contains("\\"))
+        if (nombre == null || nombre.isBlank() || nombre.codePoints().anyMatch(c -> Character.isISOControl(c)
+                || "/\\:<>\"|?*".indexOf(c) >= 0))
             throw new IllegalArgumentException("Se necesita un nombre de archivo, no una ruta");
         Objects.requireNonNull(tipoMime);
         var inferior = nombre.toLowerCase(Locale.ROOT);

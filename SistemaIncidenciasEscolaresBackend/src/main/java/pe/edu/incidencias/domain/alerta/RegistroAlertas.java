@@ -1,9 +1,6 @@
 package pe.edu.incidencias.domain.alerta;
 
 import pe.edu.incidencias.domain.acceso.*;
-
-
-
 import pe.edu.incidencias.domain.catalogo.Categoria;
 import pe.edu.incidencias.domain.catalogo.ClasificacionCategoria;
 import pe.edu.incidencias.domain.catalogo.ParametrosReiteracion;
@@ -41,8 +38,13 @@ public final class RegistroAlertas {
         var porId = new LinkedHashMap<UUID, Alerta>();
         for (var alerta : alertas) if (porId.putIfAbsent(alerta.id(), alerta) != null) throw new IllegalArgumentException("Señal repetida");
         var avisos = new LinkedHashMap<UUID, Notificacion>();
+        var destinatarios = new LinkedHashMap<UUID, Set<UUID>>();
         for (var aviso : notificaciones) {
             if (!porId.containsKey(aviso.alertaId()) || avisos.putIfAbsent(aviso.id(), aviso) != null) throw new IllegalArgumentException("Aviso ajeno o repetido");
+            if (!destinatarios.computeIfAbsent(aviso.alertaId(), _ -> new HashSet<>()).add(aviso.destinatarioId()))
+                throw new IllegalArgumentException("Una señal solo puede tener un aviso por destinatario");
+            if (aviso.emitidaEn().isBefore(porId.get(aviso.alertaId()).creadaEn()))
+                throw new IllegalArgumentException("El aviso no puede preceder a su señal");
         }
         if (!porId.keySet().containsAll(sinDestinatario)) throw new IllegalArgumentException("Metadato de señal ajena al ámbito");
         return new RegistroAlertas(porId, avisos, sinDestinatario);
@@ -152,9 +154,11 @@ public final class RegistroAlertas {
         Alerta destino;
         if (!candidatas.isEmpty()) {
             destino = candidatas.getFirst();
+            politica.exigirRecurso(destino.id(), cambio.fecha());
             validarContexto(destino.hechosHistoricos(), contexto);
             for (int i = 1; i < candidatas.size(); i++) {
                 var otra = candidatas.get(i);
+                politica.exigirRecurso(otra.id(), cambio.fecha());
                 validarContexto(otra.hechosHistoricos(), contexto);
                 destino = destino.absorber(otra, cambio);
                 nuevas.put(otra.id(), otra.gestionar(new DisposicionAlerta(DisposicionAlerta.Tipo.DUPLICIDAD,
@@ -168,6 +172,7 @@ public final class RegistroAlertas {
             anteriores.stream().flatMap(a -> a.hechosHistoricos().stream()).forEach(conocidos::add);
             var ultima = anteriores.stream().max(Comparator.comparing(Alerta::creadaEn).thenComparing(a -> a.id().toString()));
             if (ultima.isPresent()) {
+                politica.exigirRecurso(ultima.get().id(), cambio.fecha());
                 validarContexto(ultima.get().hechosHistoricos(), contexto);
                 var actualizada = ultima.get().registrar(fundamento, cambio);
                 if (hechoPrincipal.isPresent()) actualizada = retirarFuentesAbsorbidas(actualizada, fundamento.origen(), coincidencias, cambio);
@@ -212,6 +217,7 @@ public final class RegistroAlertas {
 
     public Alerta consultar(UUID alertaId, ContextoAcceso contexto, PoliticaAcceso politica, UUID usuarioId, Instant ahora) {
         var alerta = requerirAlerta(alertaId);
+        politica.exigirRecurso(alerta.id(), ahora);
         validarContexto(alerta.hechosHistoricos(), contexto);
         if (alerta.ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("La señal contiene datos futuros");
         PoliticaAcceso.exigir(politica.evaluar(usuarioId, Permiso.CONSULTAR_HECHO, contexto, ahora));
@@ -220,6 +226,7 @@ public final class RegistroAlertas {
     public List<Alerta> pendientes(UUID usuarioId, Map<UUID, ContextoAcceso> contextos, PoliticaAcceso politica, Instant ahora) {
         var resultado = new ArrayList<Alerta>();
         for (var alerta : alertas()) if (alerta.pendiente()) {
+            if (!recursoDisponible(alerta.id(), politica, ahora)) continue;
             var contexto = Optional.ofNullable(contextos.get(alerta.id())).orElseThrow(() -> new IllegalArgumentException("Falta el contexto completo de una señal"));
             validarContexto(alerta.hechosHistoricos(), contexto);
             if (alerta.ultimaModificacion().isAfter(ahora)) throw new IllegalArgumentException("La señal contiene datos futuros");
@@ -230,6 +237,7 @@ public final class RegistroAlertas {
     public RegistroAlertas leerNotificacion(UUID notificacionId, ContextoAcceso contexto, PoliticaAcceso politica,
                                            UUID usuarioId, Instant ahora) {
         var aviso = Optional.ofNullable(notificaciones.get(notificacionId)).orElseThrow(() -> new IllegalArgumentException("El aviso no existe"));
+        politica.exigirRecurso(aviso.id(), ahora);
         if (!aviso.destinatarioId().equals(usuarioId)) throw new SecurityException("El aviso corresponde a otro usuario");
         consultar(aviso.alertaId(), contexto, politica, usuarioId, ahora);
         var nuevas = new LinkedHashMap<>(notificaciones);
@@ -239,7 +247,15 @@ public final class RegistroAlertas {
     public List<Notificacion> notificacionesConsultables(UUID usuarioId, Map<UUID, ContextoAcceso> contextos,
                                                          PoliticaAcceso politica, Instant ahora) {
         var autorizadas = pendientes(usuarioId, contextos, politica, ahora).stream().map(Alerta::id).collect(Collectors.toSet());
-        return notificaciones().stream().filter(n -> n.destinatarioId().equals(usuarioId) && autorizadas.contains(n.alertaId())).toList();
+        var resultado = new ArrayList<Notificacion>();
+        for (var aviso : notificaciones()) {
+            if (!aviso.destinatarioId().equals(usuarioId) || !autorizadas.contains(aviso.alertaId())
+                    || !recursoDisponible(aviso.id(), politica, ahora)) continue;
+            if (aviso.emitidaEn().isAfter(ahora) || aviso.lecturas().stream().anyMatch(f -> f.isAfter(ahora)))
+                throw new IllegalArgumentException("El aviso contiene datos posteriores a la consulta");
+            resultado.add(aviso);
+        }
+        return List.copyOf(resultado);
     }
     public RegistroAlertas disponer(UUID alertaId, DisposicionAlerta disposicion, ContextoAcceso contexto, PoliticaAcceso politica) {
         var alerta = consultar(alertaId, contexto, politica, disposicion.registro().autorId(), disposicion.registro().fecha());
@@ -252,6 +268,9 @@ public final class RegistroAlertas {
     }
 
     private Alerta requerirAlerta(UUID id) { return Optional.ofNullable(alertas.get(id)).orElseThrow(() -> new IllegalArgumentException("La señal no existe")); }
+    private static boolean recursoDisponible(UUID id, PoliticaAcceso politica, Instant ahora) {
+        try { politica.exigirRecurso(id, ahora); return true; } catch (SecurityException bloqueada) { return false; }
+    }
     private static void exigirRegistrador(PoliticaAcceso politica, RegistroCambio cambio) {
         PoliticaAcceso.exigir(politica.evaluar(cambio.autorId(), Permiso.REGISTRAR_INCIDENCIA, cambio.fecha()));
     }

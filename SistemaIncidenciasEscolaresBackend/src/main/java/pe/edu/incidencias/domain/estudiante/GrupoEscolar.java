@@ -17,10 +17,17 @@ public record GrupoEscolar(Optional<String> grado, Optional<String> seccion) {
         this(Optional.of(grado), Optional.of(seccion));
     }
 
+    /** Compara el dato escolar sin convertir variantes de presentación en cambios de grupo. */
+    public boolean equivalenteA(GrupoEscolar otro) {
+        Objects.requireNonNull(otro, "otro");
+        return grado.map(BusquedaEstudiantes::normalizar).equals(otro.grado.map(BusquedaEstudiantes::normalizar))
+                && seccion.map(BusquedaEstudiantes::normalizar).equals(otro.seccion.map(BusquedaEstudiantes::normalizar));
+    }
+
     private static Optional<String> validar(Optional<String> valor, String campo) {
         Objects.requireNonNull(valor, campo);
         return valor.map(texto -> {
-            if (texto.isBlank()) {
+            if (BusquedaEstudiantes.normalizar(texto).isBlank()) {
                 throw new IllegalArgumentException(campo + " no puede estar vacío.");
             }
             return texto.strip();

@@ -30,7 +30,6 @@ public final class RegistroActas {
         var incorporada = base.conReserva(decision.motivoSustitucion(), contexto.ambito());
         if (anterior != null && !incorporada.esContinuacionDe(anterior)) throw new IllegalArgumentException("La incorporación perdería historia del acta");
         int previas = anterior == null ? 0 : anterior.revisiones().size();
-        if (anterior != null && anterior.revisiones().equals(incorporada.revisiones())) return this;
         if (acta.revisiones().size() != previas + 1) throw new IllegalArgumentException("Cada incorporación autoriza una única versión nueva del acta");
         if (actas.values().stream().filter(a -> !a.id().equals(acta.id())).flatMap(a -> a.revisiones().stream())
                 .anyMatch(r -> r.archivo().id().equals(acta.vigente().archivo().id()))) throw new IllegalArgumentException("El archivo ya pertenece a otra acta");
@@ -44,19 +43,28 @@ public final class RegistroActas {
         PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion()).evaluar(usuario,
                 Permiso.CONSULTAR_DOCUMENTO_RESERVADO, atenciones.contexto(casoId), ahora));
         var resultado = actas.values().stream().filter(a -> a.casoId().equals(casoId)).sorted(java.util.Comparator.comparing(ActaAdjunta::id)).toList();
-        resultado.forEach(a -> exigirRecursos(a, atenciones, ahora));
-        for (var acta : resultado) PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion()).evaluar(usuario,
-                Permiso.CONSULTAR_DOCUMENTO_RESERVADO, atenciones.contextoDocumento(casoId,
-                        acta.vigente().ambitoIncorporacion().orElseThrow()), ahora));
-        if (resultado.stream().anyMatch(a -> a.vigente().registro().fecha().isAfter(ahora))) throw new IllegalArgumentException("El acta contiene una revisión futura");
+        resultado.forEach(a -> exigirConsulta(a.id(), usuario, ahora, atenciones, directorio));
         return resultado;
     }
     public ArchivoAdjunto archivoParaDescarga(UUID actaId, UUID archivoSolicitadoId, UUID usuario, Instant ahora,
                                                RegistroAtenciones actuales, DirectorioUsuarios directorio) {
-        var acta = java.util.Optional.ofNullable(actas.get(actaId)).orElseThrow(() -> new IllegalArgumentException("El acta no existe"));
-        consultar(acta.casoId(), usuario, ahora, actuales, directorio);
+        var acta = exigirConsulta(actaId, usuario, ahora, actuales, directorio);
         if (!acta.vigente().archivo().id().equals(archivoSolicitadoId)) throw new SecurityException("El archivo fue sustituido y no es la descarga vigente");
         return acta.vigente().archivo();
+    }
+    /** Autoriza también las versiones históricas que devuelve el agregado y las citadas en informes. */
+    ActaAdjunta exigirConsulta(UUID actaId, UUID usuario, Instant ahora, RegistroAtenciones atenciones,
+                               DirectorioUsuarios directorio) {
+        var acta = Optional.ofNullable(actas.get(actaId)).orElseThrow(() -> new IllegalArgumentException("El acta no existe"));
+        atenciones.consultarCaso(acta.casoId(), usuario, directorio, ahora);
+        exigirRecursos(acta, atenciones, ahora);
+        var politica = new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion());
+        for (var revision : acta.revisiones()) {
+            if (revision.registro().fecha().isAfter(ahora)) throw new IllegalArgumentException("El acta contiene una revisión futura");
+            PoliticaAcceso.exigir(politica.evaluar(usuario, Permiso.CONSULTAR_DOCUMENTO_RESERVADO,
+                    atenciones.contextoDocumento(acta.casoId(), revision.ambitoIncorporacion().orElseThrow()), ahora));
+        }
+        return acta;
     }
     private static void exigirRecursos(ActaAdjunta acta, RegistroAtenciones atenciones, Instant ahora) {
         if (!atenciones.proteccion().permiteRecurso(acta.id(), ahora)

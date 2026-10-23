@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static pe.edu.incidencias.domain.documento.InformeCaso.*;
@@ -128,8 +129,22 @@ public final class GeneradorInformeCaso {
         var ids = informe.hechos().stream().map(HechoInforme::id).collect(Collectors.toSet());
         var reportes = informe.hechos().stream().flatMap(h -> h.reportes().stream()).map(ReporteInforme::id).collect(Collectors.toSet());
         var contexto = atenciones.contextoDocumento(informe.casoId(), new AmbitoReserva(ids, reportes, java.util.Set.of(informe.casoId())));
-        PoliticaAcceso.exigir(new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion())
-                .evaluar(usuario, Permiso.CONSULTAR_DOCUMENTO_RESERVADO, contexto, ahora));
+        var politica = new PoliticaAcceso(directorio, atenciones.restricciones(), atenciones.proteccion());
+        PoliticaAcceso.exigir(politica.evaluar(usuario, Permiso.CONSULTAR_DOCUMENTO_RESERVADO, contexto, ahora));
+        for (var acta : informe.actas()) {
+            var fuente = actas.exigirConsulta(acta.id(), usuario, ahora, atenciones, directorio);
+            if (!fuente.casoId().equals(informe.casoId())) throw new IllegalArgumentException("El acta no pertenece al caso del informe");
+            acta.archivoId().ifPresent(id -> politica.exigirRecurso(id, ahora));
+        }
+        informe.referencias().forEach(r -> politica.exigirRecurso(r.id(), ahora));
+        for (var accion : informe.actuaciones()) {
+            politica.exigirRecurso(accion.id(), ahora);
+            accion.compromisos().forEach(c -> politica.exigirRecurso(c.id(), ahora));
+        }
+        informe.derivaciones().forEach(d -> politica.exigirRecurso(d.id(), ahora));
+        informe.gobierno().convocatorias().forEach(c -> politica.exigirRecurso(c.id(), ahora));
+        informe.gobierno().intervenciones().forEach(i -> politica.exigirRecurso(i.id(), ahora));
+        informe.gobierno().decisiones().forEach(d -> politica.exigirRecurso(d.id(), ahora));
     }
 
     private void autorizar(UUID caso, UUID usuario, Permiso permiso, Instant ahora) {
@@ -165,7 +180,8 @@ public final class GeneradorInformeCaso {
                 var nombres = new java.util.HashSet<String>();
                 nombres.add(persona.descripcion());
                 Optional.ofNullable(estudiantes.get(persona.id())).map(Estudiante::nombreCompleto).ifPresent(nombres::add);
-                for (var nombre : nombres) if (resultado.toLowerCase(java.util.Locale.ROOT).contains(nombre.toLowerCase(java.util.Locale.ROOT)))
+                for (var nombre : nombres) if (Pattern.compile("(?<![\\p{L}\\p{N}\\p{M}])" + Pattern.quote(nombre)
+                        + "(?![\\p{L}\\p{N}\\p{M}])", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(resultado).find())
                     throw new IllegalArgumentException("Debe adecuarse el fragmento que identifica una persona protegida: " + clave);
             }
             return resultado;
