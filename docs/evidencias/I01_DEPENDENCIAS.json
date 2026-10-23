@@ -1,0 +1,1154 @@
+{
+  "at": "2026-10-23T20:21:09.1235615Z",
+  "mavenRuntime": [
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-webmvc",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-logging",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "ch.qos.logback:logback-classic",
+      "version": "1.5.38",
+      "licenses": [
+        {
+          "name": "EPL-2.0",
+          "url": "https://www.eclipse.org/legal/epl-v20.html"
+        },
+        {
+          "name": "LGPL-2.1-only",
+          "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "ch.qos.logback:logback-core",
+      "version": "1.5.38",
+      "licenses": [
+        {
+          "name": "EPL-2.0",
+          "url": "https://www.eclipse.org/legal/epl-v20.html"
+        },
+        {
+          "name": "LGPL-2.1-only",
+          "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.apache.logging.log4j:log4j-to-slf4j",
+      "version": "2.25.5",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.apache.logging.log4j:log4j-api",
+      "version": "2.25.5",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.slf4j:jul-to-slf4j",
+      "version": "2.0.20",
+      "licenses": [
+        {
+          "name": "MIT",
+          "url": "https://opensource.org/license/mit"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-autoconfigure",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "jakarta.annotation:jakarta.annotation-api",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "name": "EPL 2.0",
+          "url": "https://www.eclipse.org/legal/epl-2.0"
+        },
+        {
+          "name": "GPL2 w/ CPE",
+          "url": "https://www.gnu.org/software/classpath/license.html"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.yaml:snakeyaml",
+      "version": "2.6",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-jackson",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-jackson",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-tomcat",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-tomcat-runtime",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-web-server",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.apache.tomcat.embed:tomcat-embed-core",
+      "version": "11.0.27",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.apache.tomcat.embed:tomcat-embed-el",
+      "version": "11.0.27",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.apache.tomcat.embed:tomcat-embed-websocket",
+      "version": "11.0.27",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-tomcat",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-http-converter",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-context",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-web",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-beans",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "io.micrometer:micrometer-observation",
+      "version": "1.17.2",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "io.micrometer:micrometer-commons",
+      "version": "1.17.2",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-webmvc",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-servlet",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-webmvc",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-aop",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-expression",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-jdbc",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-jdbc",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-sql",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-transaction",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-persistence",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-tx",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-jdbc",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "com.zaxxer:HikariCP",
+      "version": "7.0.2",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.slf4j:slf4j-api",
+      "version": "2.0.20",
+      "licenses": [
+        {
+          "name": "MIT",
+          "url": "https://opensource.org/license/mit"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.security:spring-security-crypto",
+      "version": "7.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-starter-flyway",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework.boot:spring-boot-flyway",
+      "version": "4.1.2",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.flywaydb:flyway-database-postgresql",
+      "version": "12.4.0",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://github.com/flyway/flyway/blob/main/README.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.flywaydb:flyway-core",
+      "version": "12.4.0",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://github.com/flyway/flyway/blob/main/README.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "tools.jackson.core:jackson-databind",
+      "version": "3.1.7",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "com.fasterxml.jackson.core:jackson-annotations",
+      "version": "2.21",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "tools.jackson.core:jackson-core",
+      "version": "3.1.7",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.postgresql:postgresql",
+      "version": "42.7.14",
+      "licenses": [
+        {
+          "name": "BSD-2-Clause",
+          "url": "https://jdbc.postgresql.org/about/license.html"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.checkerframework:checker-qual",
+      "version": "3.55.1",
+      "licenses": [
+        {
+          "name": "The MIT License",
+          "url": "https://opensource.org/licenses/MIT"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.springframework:spring-core",
+      "version": "7.0.10",
+      "licenses": [
+        {
+          "name": "Apache License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "commons-logging:commons-logging",
+      "version": "1.3.6",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    },
+    {
+      "coordinate": "org.jspecify:jspecify",
+      "version": "1.0.1",
+      "licenses": [
+        {
+          "name": "The Apache License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "osvAdvisories": []
+    }
+  ],
+  "npmLockPackages": [
+    {
+      "name": "@oxc-project/types",
+      "version": "0.155.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "@oxlint/binding-android-arm-eabi",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-android-arm64",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-darwin-arm64",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-darwin-x64",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-freebsd-x64",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-arm-gnueabihf",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-arm-musleabihf",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-arm64-gnu",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-arm64-musl",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-ppc64-gnu",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-riscv64-gnu",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-riscv64-musl",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-s390x-gnu",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-x64-gnu",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-linux-x64-musl",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-openharmony-arm64",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-win32-arm64-msvc",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-win32-ia32-msvc",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@oxlint/binding-win32-x64-msvc",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@playwright/test",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "@rolldown/binding-android-arm-eabi",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-android-arm64",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-darwin-arm64",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-darwin-x64",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-freebsd-x64",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-arm-gnueabihf",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-arm64-gnu",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-arm64-musl",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-ppc64-gnu",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-s390x-gnu",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-x64-gnu",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-linux-x64-musl",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-openharmony-arm64",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-win32-arm64-msvc",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/binding-win32-x64-msvc",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "@rolldown/pluginutils",
+      "version": "1.0.1",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "@types/node",
+      "version": "24.19.2",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "@types/react",
+      "version": "19.3.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "@types/react-dom",
+      "version": "19.3.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "@vitejs/plugin-react",
+      "version": "6.1.2",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "csstype",
+      "version": "3.2.3",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "detect-libc",
+      "version": "2.1.2",
+      "license": "Apache-2.0",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "fdir",
+      "version": "6.5.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "fsevents",
+      "version": "2.3.3",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "lightningcss-android-arm64",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-darwin-arm64",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-darwin-x64",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-freebsd-x64",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-linux-arm-gnueabihf",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-linux-arm64-gnu",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-linux-arm64-musl",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-linux-x64-gnu",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-linux-x64-musl",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-win32-arm64-msvc",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "lightningcss-win32-x64-msvc",
+      "version": "1.33.0",
+      "license": "MPL-2.0",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "nanoid",
+      "version": "3.3.20",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "oxlint",
+      "version": "1.89.0",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "picocolors",
+      "version": "1.1.1",
+      "license": "ISC",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "picomatch",
+      "version": "4.0.7",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "playwright",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "playwright-core",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "fsevents",
+      "version": "2.3.2",
+      "license": "MIT",
+      "dev": true,
+      "optional": true
+    },
+    {
+      "name": "postcss",
+      "version": "8.5.31",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "license": "MIT",
+      "dev": false,
+      "optional": false
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.1",
+      "license": "MIT",
+      "dev": false,
+      "optional": false
+    },
+    {
+      "name": "rolldown",
+      "version": "1.2.15",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "license": "MIT",
+      "dev": false,
+      "optional": false
+    },
+    {
+      "name": "source-map-js",
+      "version": "1.2.2",
+      "license": "BSD-3-Clause",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "typescript",
+      "version": "6.0.3",
+      "license": "Apache-2.0",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "undici-types",
+      "version": "7.24.6",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    },
+    {
+      "name": "vite",
+      "version": "8.3.5",
+      "license": "MIT",
+      "dev": true,
+      "optional": false
+    }
+  ],
+  "sources": {
+    "maven": "mvn dependency:list -DincludeScope=runtime; POM local y padres",
+    "vulnerabilities": "https://api.osv.dev/v1/querybatch",
+    "npm": "frontend/package-lock.json y package.json del paquete instalado"
+  },
+  "npmAudit": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 4,
+      "dev": 71,
+      "optional": 47,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 74
+    }
+  }
+}

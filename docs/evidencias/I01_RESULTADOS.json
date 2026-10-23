@@ -1,0 +1,440 @@
+{
+  "dateLocal": "2026-10-23",
+  "timezone": "America/Lima",
+  "environment": {
+    "java": "27, release 25",
+    "maven": "3.9.16",
+    "node": "24.22.1",
+    "postgresql": "17.11",
+    "browser": "Edge 155.0.4283.62",
+    "transport": "HTTPS autofirmado local; cookie Secure; PostgreSQL i01_app",
+    "hardware": {
+      "cpu": {
+        "Name": "AMD Ryzen 7 250 w/ Radeon 780M Graphics        ",
+        "NumberOfLogicalProcessors": 16
+      },
+      "memoryBytes": 33615630336,
+      "os": {
+        "Caption": "Microsoft Windows 11 Home Single Language",
+        "Version": "10.0.26300",
+        "BuildNumber": "26300"
+      }
+    }
+  },
+  "requirementsSha256": {
+    "ERS_Incidencias_Escolares.md": "DD52FAC9091B3B7B42B447D884E13D712BF5497186BAF481A3DB23E7CFB95366",
+    "PLAN_IMPLEMENTACION_INCREMENTOS_VERTICALES.md": "A5FE28B88BDC4C40C99E3356876B67743179FD0800631B6B15A6FA36FCF3B001"
+  },
+  "artifactSha256": "1E841AA1DA8CED58DD0E103D26AD967220D0A175D574BAFB1AB8E8448D086AB5",
+  "backend": [
+    {
+      "suite": "pe.edu.incidencias.CryptoTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.103,
+      "cases": [
+        "cifradoAutenticadoNoRepiteNonceNiAdmiteOtroAmbito"
+      ]
+    },
+    {
+      "suite": "pe.edu.incidencias.I01IntegrationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 16.996,
+      "cases": [
+        "recuperacionRetiraAmbasSesionesYNoPermiteClaveVieja",
+        "limitaIntentosSinBloquearOtrosUsuarios",
+        "logoutExpiracionYRevocacionEnDosSesiones",
+        "busquedaNormalizadaMinimaHistoricaYFiltros",
+        "rectificacionTecnicaDeIdentidadActualizaCopiasSinRomperTerceros",
+        "correccionAutomaticaYDosEdicionesNoSePisan",
+        "dobleEnvioConcurrentePerdidaRespuestaYClaveReutilizada",
+        "accesoAjenoAdministracionAipYSinSesionDenegados",
+        "validacionTextoInerteCifradoBloqueoYEvidenciaProtegida",
+        "disposicionDelimitadaPreservaParticipacionDeTercero",
+        "csrfYReferenciasInvalidasRechazados",
+        "falloDeEvidenciaYDePersistenciaRevierteTodo",
+        "revocarRolConSesionAbiertaYRechazarDatosFueraDeContrato",
+        "tresRolesGuardanCompuestoPersistenYRecuperanEnOtraSesion"
+      ]
+    },
+    {
+      "suite": "pe.edu.incidencias.NotaTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.013,
+      "cases": [
+        "papelesIndependientesYDocumentoNoObligatorio",
+        "personaUnicaPorHecho",
+        "diferenciaDePapelConservaNombreYCodigoLegibles",
+        "aproximadaNoInventaHoraYPorClasificarNoAtribuye",
+        "normalizaSinAlterarOriginal",
+        "fechaYHoraFuturaRechazadas",
+        "fechaPasadaYGrupoNoObligatorio"
+      ]
+    }
+  ],
+  "frontend": {
+    "build": "PASS",
+    "lint": "PASS sin advertencias",
+    "e2e": {
+      "stats": {
+        "startTime": "2026-10-23T21:11:30.319Z",
+        "duration": 26452.464,
+        "expected": 8,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "name": "docente: registrar, recuperar en otra sesión y corregir",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 4694
+        },
+        {
+          "name": "auxiliar: registrar, recuperar en otra sesión y corregir",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 2512
+        },
+        {
+          "name": "directivo: registrar, recuperar en otra sesión y corregir",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 2491
+        },
+        {
+          "name": "respuesta perdida después de persistir: reintento seguro y texto inerte",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 2004
+        },
+        {
+          "name": "320 px, teclado, 200 %, etiquetas y aviso de abandono",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 1625
+        },
+        {
+          "name": "aviso y ocultamiento al caducar: recupera borrador solo para la misma cuenta",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 4101
+        },
+        {
+          "name": "registro completo solo con teclado",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 1842
+        },
+        {
+          "name": "muestra inicial de rendimiento: veinte búsquedas y guardados desde UI",
+          "project": "edge",
+          "status": "passed",
+          "durationMs": 5924
+        }
+      ],
+      "executedAgainst": "JAR recuperado de la misma huella, i01_restore_delivery, HTTPS 8448"
+    }
+  },
+  "initialPerformance": {
+    "browser": "155.0.4283.62",
+    "timezone": "America/Lima",
+    "transport": "HTTPS loopback",
+    "students": 4,
+    "users": 1,
+    "sampleOnly": true,
+    "searches": [
+      57.54939999999988,
+      66.73340000000098,
+      54.73329999999987,
+      88.48129999999946,
+      97.72360000000117,
+      73.20800000000236,
+      73.20609999999942,
+      74.88600000000224,
+      89.22590000000127,
+      52.61750000000029,
+      86.21150000000125,
+      81.10260000000198,
+      78.43179999999847,
+      92.1951999999983,
+      53.041400000001886,
+      50.31430000000182,
+      67.93609999999899,
+      51.70089999999982,
+      79.68950000000041,
+      73.9419999999991
+    ],
+    "saves": [
+      91.84469999999783,
+      100.41990000000078,
+      66.92730000000302,
+      86.9964,
+      90.193299999999,
+      76.72030000000086,
+      76.8734000000004,
+      81.77649999999994,
+      52.84400000000096,
+      70.39089999999851,
+      92.39170000000013,
+      92.20820000000094,
+      66.25849999999991,
+      67.03250000000116,
+      51.76349999999729,
+      53.45990000000165,
+      97.3273999999983,
+      98.99960000000283,
+      100.16959999999744,
+      69.24299999999857
+    ],
+    "searchP95ms": 92.1951999999983,
+    "saveP95ms": 100.16959999999744
+  },
+  "security": {
+    "mavenOsvQueried": 54,
+    "advisoriesReturned": 0,
+    "npmAudit": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 4,
+        "dev": 71,
+        "optional": 47,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 74
+      }
+    }
+  },
+  "backup": {
+    "summary": {
+      "result": "OK",
+      "tables": [
+        {
+          "equal": true,
+          "table": "app_user",
+          "count": 6,
+          "fingerprint": "d21848e6dae9462c38340999af296445"
+        },
+        {
+          "equal": true,
+          "table": "user_role",
+          "count": 6,
+          "fingerprint": "8fd1487190a04d2b9a714400abf4448b"
+        },
+        {
+          "equal": true,
+          "table": "student",
+          "count": 4,
+          "fingerprint": "b023eb28a54a9dcd943db7a441bafb41"
+        },
+        {
+          "equal": true,
+          "table": "enrollment",
+          "count": 4,
+          "fingerprint": "2caa96a38c37eaee5015547fb79bb4ab"
+        },
+        {
+          "equal": true,
+          "table": "school_year",
+          "count": 3,
+          "fingerprint": "513821fd1fe7e52dcf8c5c3f1f6db78f"
+        },
+        {
+          "equal": true,
+          "table": "category",
+          "count": 2,
+          "fingerprint": "390c16c7abb39cc0217926986240ec49"
+        },
+        {
+          "equal": true,
+          "table": "note",
+          "count": 53,
+          "fingerprint": "75c4c8d6c5689426798a154408cca68c"
+        },
+        {
+          "equal": true,
+          "table": "note_participant",
+          "count": 62,
+          "fingerprint": "e91f560bff0c1c9b5a26986ba8a639b4"
+        },
+        {
+          "equal": true,
+          "table": "note_subject",
+          "count": 62,
+          "fingerprint": "dc0d95252ac2c03199bb5d31462b4c73"
+        },
+        {
+          "equal": true,
+          "table": "note_revision",
+          "count": 6,
+          "fingerprint": "4a91ab742754c4b358e189f7de37c649"
+        },
+        {
+          "equal": true,
+          "table": "request_receipt",
+          "count": 59,
+          "fingerprint": "1c8beb74b2f228c0012b780def4b914c"
+        }
+      ],
+      "wrongKeyRejected": true,
+      "priorBackupExists": true,
+      "blockedNotes": 1,
+      "database": "i01_restore_delivery",
+      "sessionsRestored": 0,
+      "tamperingRejected": true,
+      "at": "2026-10-23T21:09:37.5258083+00:00",
+      "ordinaryServiceOpened": false
+    },
+    "backup": {
+      "action": "Backup",
+      "at": "2026-10-23T21:09:05.6087865+00:00",
+      "authorization": "ENSAYO-FICTICIO-I01",
+      "result": "OK",
+      "seconds": 4.89,
+      "sha256": "CC1A25D10F5D07AE1291AD3655DC12A7A118D4925541FAA734627FEA31F31837",
+      "detail": "Copia cifrada de datos, configuración y ejecutables. Conservar también una copia anterior aislada."
+    },
+    "restore": {
+      "action": "Restore",
+      "at": "2026-10-23T21:09:29.9304058+00:00",
+      "authorization": "ENSAYO-FICTICIO-I01",
+      "result": "OK",
+      "seconds": 5.733,
+      "sha256": "CC1A25D10F5D07AE1291AD3655DC12A7A118D4925541FAA734627FEA31F31837",
+      "detail": "Base restaurada AISLADA y sesiones retiradas. Aplicar decisiones/restricciones posteriores y verificar integridad antes de habilitar servicio. Configuración/ejecutables en .recovered."
+    },
+    "corruptVerify": {
+      "action": "Verify",
+      "at": "2026-10-23T21:09:25.2709136+00:00",
+      "authorization": "ENSAYO-FICTICIO-I01",
+      "result": "FALLO",
+      "seconds": 4.608,
+      "sha256": "",
+      "detail": "Fallo: no se confirma copia/restauración. Revisar medios, integridad y credenciales; contactar al responsable operativo."
+    }
+  },
+  "notExecuted": [
+    "Representantes humanos y tiempos CU-17",
+    "Lector de pantalla",
+    "Matriz de dos versiones/dos familias y Android",
+    "Escala ERS 4.1, diez usuarios y latencia 100 ms",
+    "Disponibilidad mensual y frecuencia diaria efectiva",
+    "Copia fuera del equipo",
+    "Otro técnico independiente",
+    "Decisiones posteriores a copia antigua y aceptación integral del producto"
+  ],
+  "recoveryServiceVerification": {
+    "result": "PASS",
+    "e2eRun": "frontend.e2e",
+    "sameRun": true,
+    "url": "https://localhost:8448",
+    "recoveredArtifactMatchesDelivery": true
+  },
+  "technicalCli": {
+    "result": "OK",
+    "locateCli": true,
+    "fictionalOnly": true,
+    "rectifyCli": true
+  },
+  "transportAndLayout": {
+    "browser": "155.0.4283.62",
+    "tlsProtocol": "TLS 1.3",
+    "cookies": [
+      {
+        "name": "I01_SESSION",
+        "httpOnly": true,
+        "secure": true,
+        "sameSite": "Strict"
+      }
+    ],
+    "layout": {
+      "viewport": 320,
+      "document": 320
+    },
+    "desktop": {
+      "viewport": 1280,
+      "document": 1280
+    },
+    "blockedNoteOwnerStatus": 404,
+    "anonymousNoteStatus": 401,
+    "privateBackupPathStatus": 404,
+    "headers": {
+      "cacheControl": "no-store, max-age=0",
+      "contentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    }
+  },
+  "staticContrastChecks": [
+    {
+      "element": "Texto principal",
+      "foreground": "#172d37",
+      "background": "#f3f6f7",
+      "ratio": 13.18,
+      "scope": "Pares CSS declarados; no aceptación WCAG integral"
+    },
+    {
+      "element": "Texto secundario",
+      "foreground": "#38505c",
+      "background": "#ffffff",
+      "ratio": 8.5,
+      "scope": "Pares CSS declarados; no aceptación WCAG integral"
+    },
+    {
+      "element": "Botón",
+      "foreground": "#ffffff",
+      "background": "#14566a",
+      "ratio": 8.17,
+      "scope": "Pares CSS declarados; no aceptación WCAG integral"
+    },
+    {
+      "element": "Cabecera",
+      "foreground": "#ffffff",
+      "background": "#123e4b",
+      "ratio": 11.56,
+      "scope": "Pares CSS declarados; no aceptación WCAG integral"
+    },
+    {
+      "element": "Foco",
+      "foreground": "#9c4500",
+      "background": "#ffffff",
+      "ratio": 6.43,
+      "scope": "Pares CSS declarados; no aceptación WCAG integral"
+    },
+    {
+      "element": "Borde de campo",
+      "foreground": "#617780",
+      "background": "#ffffff",
+      "ratio": 4.71,
+      "scope": "Pares CSS declarados; no aceptación WCAG integral"
+    }
+  ],
+  "verificationCommands": [
+    "npm ci",
+    "npm run build",
+    "npm run lint",
+    "mvnw.cmd -B -o clean package",
+    "mvnw.cmd -B -o test",
+    "I01_URL=https://localhost:8448 npm run test:e2e",
+    "backend/ops/test-backup.ps1 (parámetros en informe)",
+    "CLI locate/rectify/evidence con autorización ficticia",
+    "mvn dependency:list -DincludeScope=runtime",
+    "OSV querybatch (54 coordenadas)",
+    "npm audit --json"
+  ],
+  "testServicesStoppedAfterVerification": true
+}
