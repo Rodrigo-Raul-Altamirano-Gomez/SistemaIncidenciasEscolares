@@ -8,7 +8,7 @@ Proyecto para registrar y dar seguimiento a incidencias escolares, organizar la 
 
 La carpeta contiene una biblioteca Java con los incrementos de dominio 1 a 7, sus revisiones correctivas, la conciliación de matrícula 8A y la continuación de importación/contexto, consultas/estadísticas, configuración y protección de datos. Todavía no es una aplicación desplegable ni está preparada para operar con datos reales. Implementar las reglas de dominio no equivale a aceptar la ERS de extremo a extremo.
 
-La auditoría integral posterior contrasta los diez paquetes con la ERS y corrige reserva de informes/actas/alertas, validación por fila, reintentos, identidad, consultas y continuidad administrativa. El [documento de implementación](SistemaIncidenciasEscolaresBackend/docs/domain/IMPLEMENTACION_DOMAIN.md) conserva los hallazgos, decisiones de simplificación, regresiones y contratos que debe respetar la siguiente capa.
+El [documento de implementación](SistemaIncidenciasEscolaresBackend/docs/domain/IMPLEMENTACION_DOMAIN.md) describe el estado actual de los diez paquetes: tipos, reglas funcionales, transiciones, permisos, resultados, pruebas y contratos de integración. Las correcciones se reflejan directamente en cada apartado del dominio.
 
 | Área | Implementación actual |
 | --- | --- |

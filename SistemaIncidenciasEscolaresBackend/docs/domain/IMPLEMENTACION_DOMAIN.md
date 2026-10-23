@@ -1,54 +1,61 @@
-# Implementación del dominio — reglas completadas y contratos de integración
+# Implementación del dominio — reglas vigentes y contratos de integración
 
-Estado consolidado al 22-10-2026: implementadas las continuaciones de importación/contexto, consultas/estadísticas, configuración y protección descritas en este documento. Las secciones de incrementos 1–7 y 8A conservan su estado histórico; sus pendientes se resuelven en las continuaciones y la matriz de cierre, no se declaran pendientes actuales de dominio.
-El apartado «Incremento 8A» describe la conciliación inicial sobre filas tipadas. Las continuaciones
-posteriores completan contactos/contexto, rectificaciones, asociación de encabezados y el resto de
-reglas pendientes. La lectura física de Excel continúa siendo responsabilidad de un adaptador.
-Fuente normativa: `ERS_Incidencias_Escolares.md`, versión 1.2.
-Auditoría posterior de los diez paquetes: véase «Auditoría integral del dominio — 22 de octubre
-de 2026», al final, con correcciones, simplificaciones y verificación que actualizan esta base.
-Revisión posterior: precisiones institucionales de fecha/clasificación y corrección del principal,
-verificadas el 21 de octubre de 2026.
-Incremento 2: cuentas, designaciones, política de permisos y exclusiones por conflicto.
-Los incrementos 3 y 4 incorporaron atención compartida, actuaciones, compromisos, derivaciones y cierre local.
-Los tres últimos bloques fueron: incremento 5, comité y continuidad; incremento 6, alertas y bandeja;
-incremento 7, informes, actas y referencias oficiales. La verificación conjunta se detalla al final.
+Estado consolidado al 22-10-2026. Fuente de requisitos: `ERS_Incidencias_Escolares.md`, versión 1.2.
+Este documento describe el dominio implementado actualmente: responsabilidades de sus tipos,
+reglas, transiciones, autorizaciones, resultados y límites. Las descripciones de cada apartado
+incorporan las correcciones vigentes; no requieren aplicar notas posteriores ni reconstruir
+la secuencia de desarrollo para entender el comportamiento.
 
-## Alcance y forma de trabajo de la base 1–7
+## Alcance y forma de trabajo
 
-Los incrementos implementan el núcleo de identidad escolar, clasificación, comunicaciones de hechos,
-participaciones, reiteración, autorización, atención local, comité, avisos y documentos. Es una biblioteca Java dentro del monolito
-hexagonal; no incorpora casos de uso, puertos de persistencia, controladores, base de datos ni interfaz.
-No representa todavía el dominio completo ni una aplicación apta para datos reales.
+Es una biblioteca Java del monolito hexagonal, dentro de `pe.edu.incidencias.domain`. Implementa
+identidad y matrícula escolar, importación selectiva y contexto, clasificación, comunicaciones de
+hechos, participaciones, reiteración, autorización, atención local, comité, alertas, documentos,
+consultas/estadísticas, configuración y protección de datos. No incorpora casos de uso de
+aplicación, puertos, persistencia, controladores, autenticación, interfaz ni adaptadores.
 
-Los paquetes se separan por concepto del negocio, dentro de `pe.edu.incidencias.domain`.
-Los valores, revisiones y agregados son inmutables. Las operaciones devuelven una nueva instancia,
-reciben explícitamente autor y tiempo cuando corresponde y conservan las fuentes originales.
-No se introdujeron Spring, JPA, Lombok ni dependencias productivas externas.
+Los valores, revisiones, agregados y colecciones son inmutables. Una modificación devuelve otra
+instantánea que el llamador debe conservar. Autor e instante de operación se reciben de fuentes
+confiables de aplicación; las fechas escolares se interpretan en `America/Lima`. El dominio
+no realiza I/O ni consulta el reloj. Los IDs de operaciones se reciben explícitamente; señales,
+avisos y restricciones preventivas derivan identificadores estables de sus fuentes para deduplicar.
+La inmutabilidad no sustituye transacción, versión esperada o idempotencia durable.
 
-## Organización de la revisión
+Se compila con `release 25`. No hay Spring, JPA, Lombok ni dependencias productivas externas.
+JUnit Jupiter y Maven Surefire se utilizan únicamente para pruebas. Hay 90 archivos Java
+productivos y 45 de pruebas: 43 suites y dos auxiliares. ERS, este documento y README se versionan
+junto al código; datos reales de matrícula, credenciales, compilados y configuración local
+permanecen excluidos.
 
-Este documento reúne los detalles de estudiantes, catálogo, reportes, duplicados, reiteración, acceso y atención,
-además de decisiones, cobertura de requisitos, pruebas y pendientes para la revisión de otro agente.
+## Organización del dominio
 
-La base de los incrementos 1–7 contiene 65 archivos Java productivos, 29 archivos Java de pruebas
-(28 suites y un auxiliar de datos). Al cierre de 8A eran 69 productivos y 31 de pruebas (30 suites y
-un auxiliar). Este documento sigue siendo el detalle local único de implementación; solo el
-README principal se versionaba al cerrar esos incrementos. La auditoría integral posterior
-versiona también la ERS y este documento para mantener juntas reglas, código y regresiones.
-El incremento 2 añade 10 archivos productivos y 4 suites, manteniendo los archivos anteriores.
-Los incrementos 3 y 4 añadieron 6 archivos productivos y 6 suites.
-Los incrementos 5, 6 y 7 añaden **27 archivos productivos**: 7 de comité/continuidad,
-8 de alertas/bandeja, 11 de documentos/institución y 1 coordinador de atención/avisos.
-También se amplían `CasoAtencion` y `RegistroAtenciones`. La carga se agrupa en tres bloques
-por sus reglas y verificaciones, manteniendo como referencia los 22 archivos del primer incremento.
-Se mantuvo el `pom.xml` existente (Java 25 y JUnit 5). `application` y `adapter` permanecen sin código.
+| Paquete | Responsabilidad |
+|---|---|
+| `estudiante` | Identidad, matrícula, búsquedas mínimas, conciliación, lotes, contactos y contexto. |
+| `catalogo` | Categorías, clasificaciones históricas y ventana/umbrales de reiteración. |
+| `incidencia` | Hechos, reportes, personas, participaciones, correcciones y duplicidad. |
+| `acceso` | Cuentas, designaciones, permisos, ámbitos y exclusiones por conflicto. |
+| `atencion` | Casos, actuaciones, compromisos, derivación, cierre, comité y continuidad. |
+| `alerta` | Reiteración, fundamentos, señales, avisos y proyección de bandeja. |
+| `documento` | Informes, revisión externa, actas, archivos y referencias oficiales. |
+| `consulta` | Historial, medidas estadísticas, cobertura, proporciones y salidas tabulares. |
+| `institucion` | Configuración versionada, delegación exacta, años/grupos y aviso de privacidad. |
+| `proteccion` | Bloqueo jurídico, disposición delimitada y evidencia. |
 
-## Estudiantes: primer incremento de dominio
+Los accesores de estado completo y métodos de carga son contratos de colaboración interna y
+persistencia confiable. No son respuestas autorizadas para usuarios. Cada entrada que entregue
+datos debe aplicar la política vigente y usar la proyección correspondiente.
 
-Fecha: 21 de octubre de 2026. Fuente: ERS v1.2, especialmente RF-04, RF-06, RF-09, RF-10, RF-11, RN-17, RN-18 y CU-01. Este bloque no implementa el importador de matrícula ni representa la aceptación completa de esos requisitos.
+
+## Estudiantes, identidad y matrícula anual
+
+Base: ERS v1.2, RF-04, RF-06, RF-09–11, RN-17–18 y CU-01. El paquete `estudiante` contiene identidad, matrícula anual, conciliación, importación selectiva y contexto. La lectura física de Excel pertenece al adaptador.
 
 ### Modelo y decisiones
+
+El nacimiento conocido no puede ser posterior a ninguna fecha inicial de matrícula guardada. La comprobación se aplica también al incorporar el nacimiento después o añadir un año histórico. Los blancos Unicode no permiten nombres o grupos vacíos; el tipo y número documental se recortan reconociendo esos espacios para que no eludan la regla de ocho dígitos del DNI.
+
+`GrupoEscolar.equivalenteA` compara grado/sección con la misma normalización usada por configuración y búsquedas. El grupo equivalente en la misma fecha no crea una revisión. Una observación de fecha posterior se conserva aunque repita el grupo: permite rectificar el pasado sin reescribir lo conocido después.
 
 Paquete `pe.edu.incidencias.domain.estudiante`, Java puro, sin dependencias de infraestructura.
 
@@ -58,38 +65,32 @@ Paquete `pe.edu.incidencias.domain.estudiante`, Java puro, sin dependencias de i
 | `DocumentoIdentidad` | Tipo y número textuales. DNI admite exactamente ocho dígitos ASCII, preserva ceros y no completa cifras. Otros tipos conservan el identificador declarado, sin inventar formatos. |
 | `GrupoEscolar` | Grado y sección opcionales individualmente; exige al menos uno informado. El grupo totalmente desconocido es `Optional.empty()`. |
 | `MatriculaAnual` | Año explícito, situación informada opcional e historial ordenado de grupos por fecha efectiva. |
-| `BusquedaEstudiantes` | Funciones puras por nombre, documento, año y grupo histórico; devuelve solamente UUID y nombre en `Coincidencia`. |
+| `BusquedaEstudiantes` | Funciones puras por nombre, documento, año y grupo histórico; devuelve `Coincidencia` con UUID, nombre y referencias escolares mínimas inmutables. Nombre/documento muestran la matrícula más reciente; año/grupo muestran la referencia consultada. Sin matrícula, la lista es vacía. |
 
 Las instancias y colecciones son inmutables. Las modificaciones producen una nueva instantánea y conservan el UUID; el llamador debe guardar el resultado. No se generan identificadores ni fechas internamente. El nombre completo se conserva sin separación artificial ni normalización de tildes o espacios internos. La normalización se aplica exclusivamente al comparar búsquedas y tolera mayúsculas, tildes y espacios Unicode.
 
 Documento, nacimiento y sexo pueden quedar desconocidos. El sexo informado y la situación anual se conservan como textos declarados, sin inferirlos ni crear un catálogo institucional no definido por la ERS. No se usa el nombre como clave única. La búsqueda por documento devuelve todas las coincidencias y no decide una fusión ni escoge el primer candidato.
 
-`incorporarIdentidad`, `incorporarGrupo` e `incorporarSituacion` interpretan `Optional.empty()` como omisión: no borran datos. El borrado deliberado debe implementarse en un incremento de rectificación/autorización. No existe operación que infiera retiro, promoción o nueva matrícula por ausencia en una carga. Vincular de nuevo un año con contenido equivalente es idempotente; contenido contradictorio no sustituye el historial existente de forma silenciosa.
+`incorporarIdentidad`, `incorporarGrupo` e `incorporarSituacion` interpretan `Optional.empty()` como omisión: no borran datos. El borrado deliberado y la sustitución de grupo contradictorio se expresan mediante `RectificacionMatricula` en el lote autorizado; no son el significado de omitir un campo. No existe operación que infiera retiro, promoción o nueva matrícula por ausencia en una carga. Vincular de nuevo un año con contenido equivalente es idempotente; contenido contradictorio no sustituye el historial existente de forma silenciosa.
 
-Cada fecha efectiva de grupo pertenece al año escolar explícito. Antes de la primera fecha conocida se devuelve grupo desconocido. Una fecha inicial desconocida puede completarse y los cambios posteriores se conservan. Se pueden incorporar fechas históricas conocidas fuera de orden. Dos grupos diferentes en la misma fecha son una contradicción que se rechaza; la futura operación de rectificación debe resolverla con autorización y trazabilidad. Cambiar al grupo actual no rellena fechas anteriores con información supuesta. La incidencia debe guardar su propia instantánea del grupo conocido al registrar el hecho: el historial de matrícula no modifica automáticamente hechos guardados.
+Cada fecha efectiva de grupo pertenece al año escolar explícito. Antes de la primera fecha conocida se devuelve grupo desconocido. Una fecha inicial desconocida puede completarse y los cambios posteriores se conservan. Se pueden incorporar fechas históricas conocidas fuera de orden. Dos grupos diferentes en la misma fecha son una contradicción que se rechaza; la rectificación expresa del lote la resuelve con autorización y trazabilidad. Cambiar al grupo actual no rellena fechas anteriores con información supuesta. La incidencia debe guardar su propia instantánea del grupo conocido al registrar el hecho: el historial de matrícula no modifica automáticamente hechos guardados.
 
-Los criterios de búsqueda de grado/sección pueden ser parciales: los componentes omitidos no filtran, y un componente desconocido no satisface un valor solicitado. Los resultados no incluyen DNI completo, sexo, nacimiento, contexto, contactos, señales ni historia de atención. El paquete de estudiantes no autoriza consultas: quien lo invoque debe aplicar la política del paquete `acceso` descrita más adelante; la autenticación e integración de esas decisiones siguen pendientes.
+Los criterios de búsqueda de grado/sección pueden ser parciales: los componentes omitidos no filtran, y un componente desconocido no satisface un valor solicitado. Los resultados no incluyen DNI completo, sexo, nacimiento, contexto, contactos, señales ni historia de atención. Las funciones puras de `BusquedaEstudiantes` no autorizan por sí solas: el llamador debe aplicar la política del paquete `acceso`. Los registros de importación sí comprueban sus permisos en las operaciones públicas; la autenticación y la entrega de resultados por API siguen siendo integración.
 
-### Cobertura y pendientes
+### Cobertura y límites
 
-| ERS | Cobertura de este incremento |
-|---|---|
-| RF-04 | Comparación tolerante de nombres, búsqueda por documento/año/grupo histórico y resultados mínimos. Pendiente consulta persistente, índices, autorización y presentación para distinguir homónimos mediante datos escolares autorizados. |
-| RF-06 | Identidad, nombre completo, documento opcional, nacimiento/sexo informado, vínculo anual, situación y grupo por fechas. Pendientes contactos, domicilio y datos sensibles pertinentes. |
-| RF-09 y RN-18 | Validación textual de DNI y desconocidos; sin parser Excel, columnas, filas, previsualización o validación de lotes. |
-| RF-10 | Semántica no destructiva e idempotencia local del vínculo anual. Pendientes transacción/reintento del lote, confirmación, procedencia, resultado y borrado expreso. |
-| RF-11 y RN-17 | Identidad estable y continuidad anual. Pendiente conciliador de candidatos y unicidad global de documentos: no puede garantizarse mirando un solo agregado. |
-| CU-01 | Se prueban invariantes del modelo usadas por el caso de uso. No se ejecuta la aceptación del archivo de 91 estudiantes. |
-
-No se implementan contactos familiares, antecedentes contextuales, importador, catálogo de grupos admitidos, derechos/conservación, repositorios ni puertos. El incremento 7 añade `DatosInstitucion` como valor para informes; el mantenimiento autorizado de configuración institucional sigue pendiente. Tampoco se garantiza auditoría persistente: la aplicación futura deberá aportar autor/fecha/procedencia y transacciones al incorporar cambios legítimos. El constructor del agregado es privado para que las actualizaciones no puedan reemplazar inadvertidamente todos sus vínculos.
+| ERS | Regla implementada | Integración pendiente |
+|---|---|---|
+| RF-04 | Búsqueda por nombre/documento/año/grupo, tolerancia textual y referencias escolares para homónimos; sin DNI completo ni datos de atención. | Aplicar autorización, consultar almacenamiento e implementar selección de resultados. |
+| RF-06 | Identidad estable, datos opcionales, nacimiento coherente, matrícula anual y grupos por fecha; contactos/contexto en el registro de importación. | Persistencia y vistas autorizadas. |
+| RF-09–11; RN-17–18 | Conciliación segura, lotes revisados, confirmación/reintento, omisiones no destructivas y rectificación expresa. | Parser Excel y transacción concurrente sobre el padrón completo. |
+| CU-01 | Invariantes con filas tipadas ficticias, incluida una muestra de 91 identidades. | Aceptación del libro físico y de la operación completa. |
 
 ### Pruebas de revisión
 
-`EstudianteTest` cubre creación sin datos opcionales; añadir documento/corregir nombre sin romper identidad; omisión no destructiva; grupo desconocido y completado; fechas históricas y cambio efectivo; nuevo año sin promoción/retiro; repetición idempotente y contradicciones; colecciones inmutables; fechas/vínculos inconsistentes; DNI con ceros y formatos inválidos; rechazo de blancos; homónimos separados; normalización de búsqueda sin alterar el nombre; búsqueda por documento con resultado mínimo; y búsqueda histórica por año/grado/sección.
+`EstudianteTest` comprueba identidad estable, datos desconocidos, coherencia de nacimiento, grupos históricos, observaciones posteriores, equivalencia textual, DNI y blancos Unicode, homónimos distinguibles sin datos reservados, búsquedas e inmutabilidad. `ConciliacionMatriculaTest`, `RegistroMatriculasTest` y `RegistroImportacionTest` comprueban la coordinación descrita en las secciones de importación. Los resultados actuales de todas las suites figuran en «Verificación reproducible».
 
-Los datos de prueba son ficticios. Ejecutar desde la raíz: `./mvnw.cmd test -Dtest=EstudianteTest`. El resultado de la verificación conjunta figura en la sección «Verificación reproducible» de este documento.
-
-## Catálogo y parámetros de reiteración: incremento 1
+## Catálogo y parámetros de reiteración
 
 Base: `ERS_Incidencias_Escolares.md` v1.2, RF-03, RN-03, RN-09, RN-28 y apartado 1.10. Código en `pe.edu.incidencias.domain.catalogo`; no contiene infraestructura, repositorios, autorización ni un motor configurable de reglas.
 
@@ -107,6 +108,8 @@ Base: `ERS_Incidencias_Escolares.md` v1.2, RF-03, RN-03, RN-09, RN-28 y apartado
 
 ### APIs y decisiones de diseño
 
+Reaplicar la misma definición y estado activo de una categoría, o la misma ventana común, devuelve la instancia existente sin inflar su historia. Se siguen rechazando instantes anteriores al estado vigente. Las pruebas de catálogo incluyen estas operaciones sin cambio material.
+
 - `DefinicionCategoria` agrupa los valores editables. Nombre y descripción son obligatorios; se eliminan espacios en los extremos y se rechazan cadenas vacías. No se fijan longitudes institucionales arbitrarias.
 - `Categoria.crear(id, definicion, autorId, fecha)` crea una categoría activa. `actualizar`, `desactivar` y `activar` devuelven un nuevo agregado, sin mutar el anterior. Las revisiones completas permiten reconstruir el estado y la autoría de cada cambio. Los instantes se reciben explícitamente y no pueden preceder a la revisión vigente.
 - `clasificacionParaNuevoHecho()` comprueba que la categoría esté activa y entrega el record `ClasificacionCategoria(categoriaId, nombre, naturaleza, gravedad, avisoInmediato)`. Es una copia estable: cambiar o desactivar la categoría no modifica la clasificación que conserva el hecho.
@@ -117,9 +120,9 @@ Base: `ERS_Incidencias_Escolares.md` v1.2, RF-03, RN-03, RN-09, RN-28 y apartado
 
 ### Límites que debe respetar la siguiente implementación
 
-La aplicación futura debe mantener **una ventana común institucional**, persistir las nuevas versiones y validar autorización antes de invocar modificaciones. `PoliticaAcceso` permite definir configuración a TOE/director; la carga delegada al administrador todavía requiere su modelo explícito y no se concede automáticamente. Pasar un `autorId` registra autoría, pero no comprueba su permiso. Tampoco puede tratarse el constructor público de `ClasificacionCategoria` como comprobación de que una categoría esté activa: la operación normal debe obtenerla desde el agregado.
+La aplicación futura debe mantener **una ventana común institucional**, persistir las nuevas versiones y validar autorización antes de invocar modificaciones. `PoliticaAcceso` permite definir configuración a TOE/director; `ConfiguracionInstitucional` permite delegar al administrador operativo la carga exacta de una definición, sin concederle capacidad de decidir otros valores. Pasar un `autorId` registra autoría, pero no comprueba su permiso. Tampoco puede tratarse el constructor público de `ClasificacionCategoria` como comprobación de que una categoría esté activa: la operación normal debe obtenerla desde el agregado.
 
-Este módulo no emite notificaciones ni implementa el cálculo de reiteración, persistencia de señales, idempotencia o destinatarios. La señal deberá conservar los parámetros y las revisiones utilizados cuando se emita; guardar únicamente el identificador de categoría y volver a leer el catálogo reescribiría de hecho su fundamento histórico. Este módulo deja el fundamento disponible como valor inmutable, pero no afirma satisfacer por sí solo toda RF-03.
+El paquete `catalogo` define valores y revisiones; `CalculadoraReiteracion` calcula el fundamento y `RegistroAlertas` conserva las señales y sus parámetros emitidos. Guardar solo el ID de categoría y volver a leer su configuración no reconstruye una señal histórica. La persistencia durable sigue correspondiendo a la siguiente capa.
 
 No se proporciona un catálogo institucional precargado, umbral de tres, plazo universal, gravedad jurídica o política real. Los valores de las pruebas son ficticios.
 
@@ -130,6 +133,22 @@ No se proporciona un catálogo institucional precargado, umbral de tres, plazo u
 El resultado de la ejecución conjunta de Maven, con las pruebas de todos los subdominios, figura en la sección «Verificación reproducible» de este documento.
 
 ## Modelo de hechos y comunicaciones
+
+### Personas identificadas y datos externos
+
+`PersonaInvolucrada` admite contacto textual y documento opcionales para personal, familiares
+y externos, mediante constructor de siete parámetros. El constructor anterior de cinco
+parámetros conserva compatibilidad y no inventa datos, cuenta ni representación legal.
+Los datos escolares del estudiante siguen en su agregado: no se duplican documento/contacto
+en cada referencia de participación. La validación de `DocumentoIdentidad` conserva ceros.
+
+La consolidación de una misma persona recupera un contacto/documento solo cuando existe un
+único valor conocido entre sus fuentes. Si discrepan no escoge el primero: los aportes
+conservan cada valor y `datosPersonalesDiscrepantes` señala la diferencia, sin convertirla
+en discrepancia de responsabilidad para reiteración. El informe interno conserva esos
+datos en cada fuente y en la persona consolidada cuando son inequívocos.
+
+### Hechos, reportes y participaciones
 
 Paquete `pe.edu.incidencias.domain.incidencia`:
 
@@ -216,7 +235,7 @@ vacío; ninguna precisión institucional resucita por sí sola un hecho sin repo
 ### Fecha y clasificación institucionales vigentes
 
 `fechaVigente()` y `clasificacionVigente()` son las consultas del hecho que deben usar los cálculos
-y las futuras vistas institucionales. Sin precisión expresa, cada consulta devuelve el valor
+y las vistas institucionales. Sin precisión expresa, cada consulta devuelve el valor
 coincidente entre reportes **activos**; si ese dato difiere, devuelve vacío. No utiliza por defecto
 los datos del principal ni los de un reporte anulado. Se compara la clasificación completa,
 incluidas naturaleza, gravedad y aviso, para no elegir silenciosamente entre versiones de una
@@ -240,7 +259,7 @@ aproximada se conserva, pero no se incluye en el contador automático.
 el aviso preventivo cuando cualquiera de las fuentes activas lo exige por gravedad/protección.
 Una solicitud expresa de atención de una fuente activa sigue generando el motivo, incluso si
 la clasificación institucional no es grave. Se calcula el motivo actual; las señales históricas
-emitidas se conservan como valores históricos en el incremento 6; su almacenamiento durable corresponde a infraestructura futura.
+emitidas se conservan como valores históricos en el módulo de alertas; su almacenamiento durable corresponde a infraestructura futura.
 
 ### Corrección del reporte principal
 
@@ -259,9 +278,9 @@ automática de otro principal. Solo el principal actual está protegido frente a
 duplicado. La calculadora rechaza dos versiones del mismo ID de hecho, además de reportes
 repetidos, para impedir que el cambio de principal duplique ocurrencias.
 
-Estas operaciones agregan trazabilidad en el mismo dominio inmutable. La política del incremento 2
+Estas operaciones agregan trazabilidad en el mismo dominio inmutable. La política del paquete de acceso
 permite decidir la autorización del operador antes de invocarlas. `RegistroAtenciones` coordina versiones
-posteriores y ahora también duplicidad/separación de hechos ya atendidos; `SeguimientoInstitucional`
+y duplicidad/separación de hechos ya atendidos; `SeguimientoInstitucional`
 coordina los avisos de esa transición. La persistencia transaccional sigue fuera del dominio.
 
 ## Cálculo de reiteración y motivos de atención
@@ -297,10 +316,10 @@ utilizados y IDs de hechos con el carácter de cada atribución.
 `Hecho.requiereAvisoInmediato()` evalúa la clasificación vigente y las peticiones expresas activas;
 si la clasificación sigue en discrepancia, preserva el aviso preventivo de las fuentes activas,
 sin esperar confirmación de papeles, resolución de duplicados o umbral.
-Es el **motivo de dominio**. El incremento 6 lo utiliza para conservar señales, destinatarios,
+Es el **motivo de dominio**. El módulo de alertas lo utiliza para conservar señales, destinatarios,
 lectura, deduplicación, gestión por atención y bandeja; no realiza entrega ni almacenamiento externo.
 
-## Cuentas, designaciones y autorización: incremento 2
+## Cuentas, designaciones y autorización
 
 Base: capítulo 2; RF-01, RF-15, RF-27–28; RN-06–08, RN-23, RN-26; escenarios de CU-08,
 CU-09 y CU-14. Es un bloque de dominio puro, no una implementación de autenticación ni de casos.
@@ -320,6 +339,8 @@ Todos sus tipos están en `pe.edu.incidencias.domain.acceso`.
 | `PoliticaAcceso` | Decisión de permiso, vista del aporte propio, filtros, destinatarios y registro/retiro de restricciones. |
 
 ### Cuentas y designaciones
+
+Una baja o cese explícitos no pueden dejar la instalación sin administrador operativo vigente en su fecha efectiva. Antes de retirar el último acceso debe designarse un reemplazo. Esta regla no evita el vencimiento natural futuro de designaciones; su revisión sigue siendo una responsabilidad operativa.
 
 `DirectorioUsuarios.inicializar` es la frontera excepcional de aprovisionamiento del primer
 administrador. Exige una constancia institucional motivada; no autentica al otorgante ni permite
@@ -347,6 +368,8 @@ No hay contraseñas, credenciales compartidas, recuperación de acceso ni sesion
 
 ### Permisos y responsabilidades específicas
 
+`REGISTRAR_ACCION_INMEDIATA` permite al autor de un aporte documentar una acción realizada antes de su atención, con cuenta/rol vigentes y sin conflicto ni bloqueo. No exige clasificación leve para consignar protección urgente. El registro de atención limita los compromisos cotidianos a conductas disciplinarias leves; este permiso no concede decisión formal de atención. La lectura posterior de lo propio usa `CONSULTAR_APORTE_PROPIO`, no el permiso de edición.
+
 `evaluar(usuario, permiso, contexto, ahora)` consulta cuenta, roles vigentes y restricciones en
 cada llamada. Las operaciones que necesitan ámbito se rechazan sin él. Una exclusión prevalece
 antes de examinar autoría, rol administrativo o membresía. No hay un permiso especial de
@@ -360,15 +383,15 @@ rechazan mediante excepciones de validación.
 | Registrar hechos | Docente, auxiliar, directivo ordinario, TOE, comité y director. |
 | Importar nómina | AIP; los roles institucionales no lo adquieren automáticamente. |
 | Consultar/rectificar/aclarar aporte propio | Autor con capacidad funcional; no habilita aporte ajeno ni hecho consolidado. Rectificar y acción cotidiana quedan limitadas por la atención iniciada. |
-| Acción cotidiana inmediata | Aporte propio activo, todavía no atendido y clasificación vigente disciplinaria leve. Una clasificación discrepante o reclasificada grave no reutiliza la copia leve del reporte. |
+| Acción inmediata propia | Aporte propio activo y no atendido. Puede documentarse protección urgente aunque sea grave, por clasificar o discrepante; el registro admite compromisos cotidianos solo en clasificación disciplinaria leve. |
 | Consulta institucional, atención, aclaración, informes, documentos y estadísticas | TOE, miembro del comité y director, con la misma amplitud institucional y sin conflicto. La membresía no transfiere recepción cotidiana automáticamente. |
-| Definir configuración | TOE/director; no miembro por su sola membresía ni administrador por su solo rol. Carga delegada pendiente. |
+| Definir configuración | TOE/director; el miembro no obtiene esta facultad por su sola membresía. El administrador operativo solo puede cargar una definición exacta delegada mediante `ConfiguracionInstitucional`. |
 | Administrar cuentas | Administrador designado y vigente; no da acceso funcional a expedientes. |
 | Convocar comité | TOE ordinariamente. Comité/director sustituyen solo si hay TOE vigente y todos los TOE vigentes están excluidos en el asunto, con motivo. La mera ausencia o falta de designación no se considera automáticamente conflicto. |
 | Registrar actos formales del comité | Director vigente y no excluido; si no hay director elegible por exclusión o falta de vigencia, miembro del comité con motivo de sustitución. TOE sin membresía no obtiene esa facultad. |
 
 Las decisiones por sustitución devuelven `porSustitucion` y el motivo. No registran una convocatoria,
-un acuerdo o un caso: el incremento 5 guarda esos datos con autoría real y la sustitución aplicada.
+un acuerdo o un caso: el módulo de comité guarda esos datos con autoría real y la sustitución aplicada.
 La política comprueba quién podría actuar, no si un caso pendiente es especialmente grave/no resuelto.
 
 `consultarAportePropio` devuelve una proyección `AportePropio`, nunca `Hecho`. Incluye solo
@@ -381,7 +404,7 @@ del informe ni de historia completa. Una baja o exclusión también deniega esta
 `filtrarHechosConsultables` solo sirve para hechos autónomos sin relaciones de caso omitidas.
 `filtrarContextosConsultables` conserva el cierre suministrado de cada asunto y debe preferirse
 al integrar casos/historiales. La salida no debe acompañarse de conteos de elementos excluidos.
-Las estadísticas futuras deberán filtrar antes de calcular totales y derivados identificables.
+`MotorEstadisticas` filtra las fuentes antes de calcular totales y derivados identificables.
 
 ### Ámbitos y exclusiones expresas
 
@@ -392,8 +415,7 @@ versiones repetidas de un hecho y exige que un aporte solicitado pertenezca al c
 No se extiende la exclusión por compartir estudiante. Los datos de otro asunto autorizado del
 mismo estudiante siguen disponibles.
 
-La construcción del contexto **no descubre relaciones no suministradas**. El futuro caso deberá
-aportar todos los hechos/reportes/casos que revelen la denuncia; no basta presentar un ID aislado
+La construcción del contexto **no descubre relaciones no suministradas**. `RegistroAtenciones` debe recibir y cerrar los hechos/reportes/casos que revelen la denuncia; no basta presentar un ID aislado
 ni agrupar hechos ajenos por estudiante. Un permiso de documento, exportación o estadística exige
 el mismo contexto reservado que el acceso directo. El paquete no implementa consultas SQL ni
 puede recuperar por sí mismo vínculos omitidos.
@@ -450,22 +472,18 @@ ni abre caso. Si no queda nadie, devuelve lista vacía y `requiereDesignacion=tr
 identidades de participantes o causa de denuncia. El administrador no se convierte por ello en
 receptor de contenido; la futura aplicación solo podrá mostrarle la necesidad operativa mínima.
 
-### Integración pendiente y límite del incremento
+### Integración y límites de autorización
 
-La política es de dominio, no un interceptor de todos los métodos Java. Los agregados anteriores
-siguen siendo objetos internos: pasarles un UUID de autor no acredita autorización. Las futuras
+La política es de dominio, no un interceptor de todos los métodos Java. Los agregados son objetos internos: pasarles un UUID de autor no acredita autorización. Las futuras
 entradas del monolito deberán cargar directorio y relaciones actuales, formar el contexto,
 sincronizar restricciones, exigir el permiso y persistir las nuevas instancias con versión esperada.
 Solo después podrán entregar una vista autorizada o emitir avisos. Deben conservar los retiros
 y no reconstruir el directorio/restricciones desde una copia antigua para recuperar permisos.
 
-Quedan pendientes autenticación, contraseñas/recuperación, sesiones y enlaces de descarga,
-bloqueo jurídico por disposición sobre datos, delegación de carga de configuración, alcance AIP
-del lote/conciliación, auditoría persistente de accesos, resolución de relaciones en repositorios,
-transacciones y concurrencia. No se implementa respaldo ni se concede a TOE/AIP por su rol.
+El bloqueo jurídico se evalúa mediante `ControlProteccion`; la delegación exacta de configuración y el alcance AIP del lote están modelados en sus registros. Quedan pendientes autenticación, contraseñas/recuperación, sesiones, enlaces de descarga, evidencia persistente de accesos, resolución de relaciones en repositorios, transacciones y concurrencia. No se implementa respaldo ni se concede a TOE/AIP por su rol.
 No hay aceptación integral de CU-09 ni de seguridad operativa: se prueban las decisiones de dominio.
 
-## Atención compartida, actuaciones y compromisos: incremento 3
+## Atención compartida, actuaciones y compromisos
 
 Base: RF-14, RF-22–26; RN-05, RN-12–13 y RN-15; invariantes de CU-06 y CU-07.
 Paquete `pe.edu.incidencias.domain.atencion`. **Caso** significa aquí la entidad de atención
@@ -506,9 +524,11 @@ Guardar atención marca los reportes activos como atendidos para RF-17, sin corr
 actuaciones y sus alcances. Si se retira el último vínculo de una apertura errónea, el caso se
 conserva cerrado por `APERTURA_ERRONEA`; no queda una atención pendiente vacía ni se borran los
 seguimientos reales que existían. `citarAntecedente` referencia un caso cerrado sin copiar sus
-actuaciones. El incremento 5 añade continuidad explícita entre pendientes, conservando los datos en su caso de origen.
+actuaciones. `continuarAtencion` permite continuidad explícita entre pendientes, conservando los datos en su caso de origen.
 
 ### Actuaciones y compromisos
+
+El guardado común de `RegistroAtenciones` valida autor y fecha de todas las revisiones nuevas de actuaciones, compromisos anidados y derivaciones contra el operador y el instante confiables del guardado. No reatribuye las revisiones ya almacenadas cuando interviene otro responsable. Las comprobaciones se comparten entre operaciones ordinarias y formales.
 
 `Actuacion.realizada` admite directamente fecha efectiva y un relato suficiente que exprese
 acción/resultado. No exige dos textos, planificación previa o adjuntos. `prevista` registra solo
@@ -534,8 +554,9 @@ a su inicio; una acción cotidiana anterior conserva su propia procedencia como 
 
 ### Acciones inmediatas sin caso
 
-`registrarInmediata` vincula una actuación ya realizada al aporte propio cotidiano habilitado
-por `PoliticaAcceso`; no crea un caso. Al abrir atención, `actuacionesDelCaso` recupera esas mismas
+`inmediatasDelAutor(reporteId, usuarioId, directorio, ahora)` exige `CONSULTAR_APORTE_PROPIO` y conserva la lectura tras iniciar atención. Devuelve `AccionInmediataPropia`, `RevisionPropia` y `CompromisoPropio`, valores anidados con colecciones inmutables: solo revisiones del propio autor, también dentro de cada compromiso. No entrega seguimiento institucional ajeno, los datos reservados del caso ni actos colectivos. Conflicto, bloqueo o datos posteriores al corte impiden la consulta.
+
+`registrarInmediata` vincula una actuación ya realizada a un único hecho de un aporte propio habilitado por `REGISTRAR_ACCION_INMEDIATA`, antes de atención institucional; no crea un caso. Admite constancia urgente de protección en hechos graves, por clasificar o discrepantes, sin esperar diagnóstico. Los compromisos inmediatos solo se admiten para clasificación disciplinaria leve; no se añaden acuerdos formales a una constancia urgente. Al abrir atención, `actuacionesDelCaso` recupera esas mismas
 instancias por sus reportes de origen. No las copia al mapa de actuaciones del caso ni les da
 otro ID. Un intento de incorporarlas de nuevo como nuevas actuaciones se rechaza.
 `actualizarInmediata` conserva su historia y permite seguimiento institucional cuando el autor
@@ -544,9 +565,13 @@ actuación. Los pendientes de estas referencias también se consideran al consul
 
 ### Reserva del conjunto y evolución de los hechos
 
+Las sobrecargas de `actuacionesDelCaso` e `inmediatasDelHecho` que reciben una política externa aplican además las exclusiones y el control propios del registro. Una política incompleta no los retira. Se rechazan actuaciones inmediatas posteriores al instante consultado, aunque el caso sea anterior.
+
+`proteccionEfectiva` se calcula una vez al construir cada instantánea, después del índice de reserva. Relaciona actuaciones, compromisos de todas sus revisiones, derivaciones, acciones inmediatas, convocatorias, intervenciones y decisiones del comité con los ámbitos y personas que revelan. Las copias conservan el control recibido y recalculan las relaciones de su nuevo estado. No se guardan decisiones de autorización: usuario, tiempo, vigencia y bloqueos se evalúan en cada operación.
+
 `contexto(casoId)` protege el contenido que presenta el caso y sus antecedentes consultados.
 `hechosReservados` distingue hechos vigentes y fuentes que permanecen en actuaciones, derivaciones,
-convocatorias o continuidad real de los simples vínculos erróneos retirados. Estos últimos conservan
+convocatorias, conclusiones reales de cierre o continuidad real de los simples vínculos erróneos retirados. Estos últimos conservan
 su rastro en `hechosHistoricos`/`vinculos` sin arrastrar automáticamente el relato al caso independiente.
 Los casos que referencian un hecho aportan sus IDs al ámbito de ese hecho, sin incorporar por transitividad
 el contenido de otros asuntos. No se extiende por compartir estudiante. Añadir o corregir vínculos autoriza
@@ -569,9 +594,100 @@ La prevención se ancla al reporte denunciado o a la aclaración del hecho que l
 
 `actualizarHecho` continúa rechazando la eliminación implícita de fuentes. Para hechos existentes se
 utilizan las transiciones explícitas `relacionarDuplicados` y `separarDuplicado`, que coordinan fuentes,
-atenciones, reserva e historia sin fusionar actuaciones. Su detalle figura en la revisión correctiva.
+atenciones, reserva e historia sin fusionar actuaciones. Su contrato se describe en «Duplicados con atenciones existentes».
 
-## Derivaciones y cierre local: incremento 4
+### Duplicados con atenciones existentes
+
+`RegistroAtenciones.relacionarDuplicados(principalId, origenId, casoContinuidad, directorio, cambio)`
+autoriza el conjunto antes de relacionar. Si ambos hechos tienen atenciones pendientes diferentes,
+exige elegir una de ellas; si existe una sola se utiliza esa. El hecho principal conserva su UUID y
+recibe las referencias a los reportes íntegros del origen, sin mezclar textos o revisiones. El origen
+sale del conjunto de hechos computables y su UUID se resuelve al canónico mediante `hechoCanonico`.
+No se crea un hecho nuevo ni se cuenta el origen como otra ocurrencia.
+
+El registro `Duplicidad` conserva el hecho de origen completo —incluidas precisiones, aclaraciones,
+relaciones y selección previas—, el principal, la atención elegida, referencias generadas, operador,
+fecha y eventual corrección. Las decisiones institucionales del origen conservan su procedencia;
+no se convierten automáticamente en nuevas decisiones del principal ni se resuelven diferencias
+por mezclar historiales. Para precisar el hecho consolidado se usa la operación institucional existente.
+
+El caso elegido mantiene una sola atención vigente del hecho. El otro conserva sus actuaciones,
+compromisos, derivaciones y referencias a acciones inmediatas, sin copiarlas. Si conserva otros
+hechos/trabajos continúa por ellos; si no, cierra técnicamente por duplicidad. Las atenciones ya
+cerradas conservan su cierre y no se reabren. Los reportes y el histórico de reservas se conservan.
+Consultas, unicidad y cobertura de derivación usan identidad canónica; una derivación preparada
+con el ID anterior puede completarse con ese mismo ID y cubrir el hecho único, sin reescribirla.
+
+`separarDuplicado(origenId, casoDelSeparado, directorio, cambio)` corrige con causa una relación
+equivocada. Recupera la identidad del origen y las versiones actuales de sus reportes, incluidas
+rectificaciones recibidas durante la relación. La historia de duplicidad se marca corregida, no
+se elimina. No reabre atenciones cerradas; una fuente que seguía pendiente recupera su hecho, y
+puede elegirse expresamente otra atención pendiente para continuarlo sin copiar actuaciones.
+Las referencias generadas solo por el error se retiran cuando no conservan contenido compartido;
+las continuidades rectificadas conservan fecha/causa y se identifican como tales en el informe,
+sin presentarlas como vigentes. Las actuaciones/documentos que sí contienen información relacionada
+mantienen su reserva.
+
+No se destruye un principal vigente: si el reporte seleccionado pertenece al origen que se separa,
+debe elegirse antes otro reporte válido que permanezca. Si el principal fue absorbido después por
+otra duplicidad, se corrige primero esa relación posterior. Son comprobaciones referenciales,
+no un procedimiento de reconciliación de contenidos o versiones.
+
+`SeguimientoInstitucional.relacionarDuplicados` y `separarDuplicado` devuelven atención y alertas
+coordinadas en la misma operación de dominio. Los avisos exclusivos del duplicado se disponen por
+duplicidad; se conserva su notificación e historia. La reiteración se recalcula con hechos únicos
+y la última configuración conservada en los fundamentos afectados, manteniendo todas las emisiones
+anteriores. Los cambios institucionales de parámetros siguen entrando por `evaluarReiteracion` con
+la configuración aprobada actual; no se inventan parámetros al identificar un duplicado.
+Corregir una disposición de duplicidad equivocada conserva esa disposición en la revisión y puede
+devolver la señal a pendiente desde la rectificación. Un cierre técnico anterior no la consume como
+atención nueva; la corrección no reabre un caso ni inventa una intervención.
+
+### Reserva al corregir vínculos
+
+La fuente de la restricción y su propagación se separan. Una prevención por reporte se ancla a su
+ID; una prevención por aclaración, al hecho. La exclusión manual se ancla al caso declarado o al
+ámbito de hechos/reportes indicado mediante el overload de `excluirUsuario`/`PoliticaAcceso.excluir`.
+Este origen debe pertenecer al contexto autorizado. Se conserva la prohibición de autoexclusión,
+autoría, fecha, motivo, retiro no propio e independencia de cada fuente de restricción.
+
+`hechosHistoricos` y `vinculos` mantienen auditoría; `hechosReservados` identifica el contenido que
+todavía revela el asunto. Retirar un vínculo erróneo sin contenido compartido no arrastra el relato
+retirado a las consultas futuras ni transmite permanentemente su exclusión a otros hechos. Si una
+actuación del caso, derivación, convocatoria, conclusión real de cierre o continuidad real lo conserva, se mantiene protegido.
+`contextoDeHechos` incorpora IDs de casos de reserva sin importar automáticamente todos sus otros
+hechos: consultar un hecho independiente no equivale a descargar el caso que también lo mencionó.
+
+Un informe emitido conserva las fuentes que contenía, aunque hoy se haya corregido el vínculo.
+Su consulta/emisión usa `contextoDocumento`, que añade esas fuentes y sus propietarios actuales.
+Cada revisión de acta conserva `ambitoIncorporacion`; consultar/descargar revalida ese ámbito.
+Así puede permitirse el caso independiente y seguir denegando un informe o acta anterior que contiene
+la denuncia. Una sustitución conserva los metadatos de dominio de las revisiones incorporadas,
+incluso si la entrada trae solo su contenido original; no puede modificar ese prefijo conocido.
+
+### Responsabilidades y carga acotada
+
+`CasoAtencion` decide la pertinencia temporal y material de su propia gestión. `RegistroAtenciones`
+coordina identidades, vínculos, casos y reserva. `RegistroAlertas` conserva señales, fundamentos,
+disposiciones y avisos; no depende de `RegistroAtenciones`. `SeguimientoInstitucional` es el único coordinador entre ambos estados.
+El overload `actualizar(..., hechosModificados, ...)` omite asuntos independientes y comprueba
+fechas únicamente de las señales y atenciones pertinentes. No entrega mensajes ni realiza I/O.
+
+`RegistroAtenciones.cargarAmbito` recibe hechos/casos relevantes, acciones inmediatas, restricciones,
+relaciones de duplicidad y un `Indice` autoritativo de reserva/unicidad (IDs). Mantiene referencias
+a casos no cargados para comprobar conflictos y rechazar otra atención pendiente sin necesitar
+sus actuaciones completas. Recalcula las entradas de los casos modificados y conserva las demás.
+Para decidir continuidad sí exige cargar la atención que debe modificarse; para consultar un
+antecedente, su contenido. `RegistroAlertas.cargarAmbito` recibe solo episodios/avisos afectados,
+incluyendo la historia pertinente de esos orígenes, no todas las señales del colegio.
+
+Estos constructores reconstituyen estados confiables; no son entradas de cliente ni autorizaciones.
+La futura persistencia debe aportar un índice completo para los IDs afectados, fuente actual de
+restricciones/designaciones, versión consistente, unicidad y transacción. Debe guardar los cambios
+por identidad y no reemplazar datos no cargados con una colección parcial. No se introduce un
+repositorio, una base de datos ni casos de uso para suplir ese contrato.
+
+## Derivaciones y cierre local
 
 Base: RF-29–30, RN-15–16 e invariantes de CU-07/CU-10. Valores nuevos `Derivacion` y `CierreLocal`,
 integrados con `CasoAtencion` y `RegistroAtenciones`.
@@ -612,7 +728,7 @@ su fecha de cierre es la de ejecución, sin borrar la continuidad posterior.
 Cerrar no modifica actuaciones/compromisos ni presume cumplimiento. `requiereTrabajo` distingue
 estado del caso de seguimiento real: una cerrada con acciones previstas, acuerdos con seguimiento
 o derivaciones preparadas permanece en la proyección de pendientes. Una cerrada sin pendientes
-sale de ella y conserva su historia. El incremento 6 integra esta proyección en la bandeja y coordina avisos.
+sale de ella y conserva su historia. `BandejaAtencion` integra esta proyección y `SeguimientoInstitucional` coordina los avisos.
 El seguimiento posterior se registra sobre la misma atención sin reabrirla ni cambiar su cierre.
 Completar referencias o registrar otra derivación después tampoco reemplaza el cierre original.
 
@@ -621,7 +737,7 @@ o retirar un cierre equivocado para dejar pendiente; en este último caso se vue
 la unicidad de atención pendiente por hecho y se rechaza conflicto con otra atención vigente.
 No existe reapertura automática ni un procedimiento administrativo obligatorio adicional.
 
-### Límite de los dos bloques
+### Límites de la coordinación de atención
 
 La colección comprueba sus invariantes con el contenido relevante y un índice autoritativo de reserva
 y atención pendiente. `cargarAmbito` permite reconstituir una parte consistente sin cargar el contenido
@@ -630,16 +746,15 @@ atenciones cuya continuidad se decide. El índice no sustituye transacción, ver
 persistente; no es válido omitir del índice una atención para aparentar que el hecho está libre.
 No hay repositorio, autenticación, API, interfaz, persistencia durable de notificaciones ni comprobación de
 envíos externos. El registro no descubre información almacenada fuera de sus entradas.
-Los incrementos siguientes de este documento completan comité, reasignación, continuidad, actas,
-informes y referencias en el dominio, manteniendo esos límites de infraestructura.
+Comité, reasignación, continuidad, actas, informes y referencias comparten estos límites de infraestructura.
 
-## Comité y continuidad: incremento 5
+## Comité y continuidad
 
 Base: RF-18, RF-22–23, RF-27–30; RN-06, RN-08, RN-12, RN-14–16; escenarios de CU-05,
 CU-06, CU-08 y CU-09. Se amplían `CasoAtencion` y `RegistroAtenciones`; no se crea un expediente
 separado del comité ni una capa de aplicación.
 
-| Tipo nuevo | Responsabilidad |
+| Tipo | Responsabilidad |
 |---|---|
 | `EncargadoAtencion` | Encargado actual TOE/COMITE, independiente de los dos estados pendiente/cerrada. |
 | `ComposicionComite` | Instantánea de cuentas/designaciones institucionales vigentes: director y miembros designados, sin plantilla fija de tres personas. |
@@ -693,15 +808,23 @@ como una conclusión colectiva sobre el fondo. La retirada ordinaria del último
 mantiene su regla distinta de cierre por APERTURA_ERRONEA.
 
 El ámbito distingue fuentes del contenido consultado y referencias de reserva; no hace equivalentes
-todas las consultas del componente conectado. La revisión correctiva incorpora duplicados con
-atenciones existentes y su separación motivada, conservando las atenciones anteriores relacionadas.
+todas las consultas del componente conectado. Las operaciones de duplicidad y separación conservan las atenciones anteriores relacionadas conforme al contrato de atención.
 
-## Alertas, notificaciones y bandeja: incremento 6
+### Registro conjunto de la intervención
+
+El overload de `registrarIntervencionComite` recibe decisiones (`Map<UUID,String>`), actuaciones
+con compromisos y cierre opcional junto con reunión, convocatoria, participantes y fecha efectiva.
+Autoriza una vez, valida participantes/fechas/identidades y devuelve un solo registro nuevo. Conserva
+operador real, sustitución y procedencia formal de cada decisión/actuación/cierre. No requiere guardar
+primero una reunión vacía. Si falla cualquier parte, la instancia anterior permanece íntegra.
+Las operaciones individuales existentes se mantienen para completar información posteriormente.
+
+## Alertas, notificaciones y bandeja
 
 Base: RF-19–21, RF-22, RF-28; RN-09–11, RN-23; escenarios de CU-03–05 y CU-07.
 Son estados y proyecciones de dominio, sin correo, SMS, interfaz, planificador ni repositorio.
 
-| Tipo nuevo | Responsabilidad |
+| Tipo | Responsabilidad |
 |---|---|
 | `MotivoAlerta` | Distingue gravedad, riesgo comunicado y reiteración. |
 | `FundamentoAlerta` | Fuentes, motivos, clasificación y evaluación de reiteración emitidos, con instante explícito. |
@@ -714,6 +837,8 @@ Son estados y proyecciones de dominio, sin correo, SMS, interfaz, planificador n
 | `SeguimientoInstitucional` | Resultado conjunto inmutable de atención actualizada y avisos sincronizados, en el paquete `atencion`. |
 
 ### Señales conservadas y novedades
+
+`cargarAmbito` exige IDs únicos y un solo aviso por pareja señal/destinatario; el aviso no puede preceder a su señal. Las consultas de notificaciones rechazan emisión o lecturas posteriores al instante solicitado.
 
 `evaluarHecho` avisa desde la primera comunicación grave/protección o solicitud expresa, aunque
 no exista responsabilidad corroborada, parámetros de reiteración o caso. Usa clasificación vigente;
@@ -735,6 +860,8 @@ Una disposición sin caso requiere resultado suficiente; descartar gravedad no p
 operación sin fundamento. No se infiere una intervención realizada a partir de la lectura.
 
 ### Atención y reserva conjunta
+
+El bloqueo del UUID de una alerta se comprueba al consultar, gestionar, reevaluar o listar pendientes. El bloqueo del aviso se comprueba al leerlo o entregarlo en un listado. La bandeja omite también fundamentos históricos cuyo recurso esté bloqueado. Estos controles se suman al ámbito de hechos/casos; los accesores completos siguen siendo exclusivos de colaboración interna y persistencia confiable.
 
 `SeguimientoInstitucional.actualizar(nuevasAtenciones, alertasAnteriores, directorio, cambio)`
 devuelve ambos estados coordinados: decide la gestión pertinente y aplica las transiciones de avisos
@@ -760,12 +887,12 @@ seguimiento y derivaciones preparadas. Una atención cerrada con pendiente conti
 cerrada sin trabajo queda en historia. Las anotaciones cotidianas sin señal no crean trabajo.
 No se agrupa por estudiante como sustituto de caso/hecho.
 
-## Informes, actas y referencias: incremento 7
+## Informes, actas y referencias
 
 Base: RF-02 parcial, RF-31–33, RF-28; RN-20–21, RN-23; escenarios de CU-11 y CU-12.
 Paquetes `documento` e `institucion`, sin lectura/escritura de archivos, renderizado PDF o envío.
 
-| Tipo nuevo | Responsabilidad |
+| Tipo | Responsabilidad |
 |---|---|
 | `DatosInstitucion` | Valores institucionales conocidos, sin colegio o código fijados en Java. |
 | `InstrumentoOficial` | Instrumentos/orígenes externos explícitos; no es un motor de protocolos. |
@@ -781,6 +908,8 @@ Paquetes `documento` e `institucion`, sin lectura/escritura de archivos, renderi
 
 ### Consolidado y emisión
 
+Al emitir o consultar una instantánea, `autorizarInstantanea` revalida el ID del informe, ámbito actual y fuentes originales, todas las actas citadas con sus revisiones/archivos, referencias, actuaciones, compromisos, derivaciones y actos de gobierno proyectados. El generador debe recibir el `RegistroActas` actual completo para las actas citadas; una fuente ausente falla cerrada, incluso si el informe externo oculta el ID del archivo. Si una fuente está bloqueada se deniega el informe completo.
+
 El generador recibe registros de atención, actas, referencias, directorio e identidades escolares
 necesarias. Produce un informe por caso que conserva cada hecho una vez, con sus datos vigentes,
 fuentes originales, diferencias y participaciones procedentes de todos los reportes vinculados.
@@ -793,8 +922,7 @@ referencias oficiales disponibles. Las continuidades se identifican sin copiar a
 otro caso. El contexto se incorpora mediante selección explícita, no desde una ficha completa.
 Los antecedentes de atención muestran referencia, estado y trabajo pendiente propio, incluida
 la fuente de una continuidad; no se ocultan sus pendientes ni se copian sus actuaciones al destino.
-El módulo de antecedentes contextuales y su procedencia aún está pendiente; el mapa seleccionado
-es un límite de entrada, no una implementación de esa ficha ni su importador.
+`SeleccionContextoInforme.recuperar` obtiene los campos pertinentes de `RegistroImportacion` y su historia al corte. El mapa seleccionado es la entrada al generador, no una autorización para copiar toda la ficha contextual.
 
 La vista previa no tiene identificador de emisión. Emitir asigna el ID y conserva quién/cuándo,
 institución, motivo, destinatario/finalidad y corte. Una nueva actuación no reescribe la instantánea
@@ -803,11 +931,21 @@ arbitraria a una base de datos ni permite usar un registro con datos posteriores
 Emitir no acredita firma, envío, registro oficial ni cierre de un protocolo.
 
 `consultarEmitido` exige construir el generador con el registro/directorio actuales y vuelve a
-comprobar la reserva del caso; devuelve la misma instantánea, sin regenerarla. Una exclusión nueva
+comprobar la reserva del caso y las fuentes conservadas; devuelve la misma instantánea, sin regenerarla. Una exclusión nueva
 deniega nuevas lecturas aun si el informe fue emitido o consultado antes. Los getters estructurales
 de valores/agregados son internos: no deben convertirse directamente en endpoints de descarga.
 
 ### Salida a terceros
+
+El informe externo no copia automáticamente contactos/documentos de personas externas,
+incluso si la persona está admitida. `RevisionSalida` agrega selecciones expresas por ID
+(`contactosAdmitidos`, `documentosExternosAdmitidos`) y exige que esos IDs estén admitidos
+como personas. El constructor anterior inicializa ambas selecciones vacías. Si un relato
+repite un contacto/documento no seleccionado, exige adecuarlo antes de salir. Estas reglas
+no modifican la regla previa de iniciales/DNI del estudiante para violencia externa.
+`PersonaExternaDatosTest` comprueba mínimos, duplicados, discrepancias y selección interna/externa sin fuga por las fuentes del informe.
+
+La detección de un nombre literal protegido utiliza límites Unicode de letra/número/marca: «Ana» no coincide dentro de «semana», pero «ANA,» independiente sí requiere adecuación. Esta comprobación no detecta toda identificación posible ni sustituye la revisión institucional.
 
 El destino externo exige destinatario, finalidad y `RevisionSalida` del caso, con base de comunicación
 declarada y evaluación del riesgo de identificación conservadas en la instantánea. Registrar esa base
@@ -829,9 +967,11 @@ con la misma revisión/minimización. No hay publicación ni entrega automática
 
 ### Actas y constancias externas
 
+`RegistroActas.exigirConsulta` autoriza el acta individual y los ámbitos de incorporación de todas sus revisiones, además de sus archivos históricos. Una sustitución no retira la reserva de versiones anteriores. `archivoParaDescarga` comprueba exclusivamente el acta solicitada y exige su archivo vigente: otra acta bloqueada no inutiliza una descarga permitida.
+
 Se admiten varias actas del caso. `ArchivoAdjunto` limita formato declarado a PDF/DOCX y tamaño a
 10 000 000 bytes inclusive (interpretación decimal de 10 MB); rechaza archivos vacíos, exceso,
-extensión/MIME discordantes o rutas como nombre. Son metadatos: comprobar firma real del archivo,
+extensión/MIME discordantes, controles (incluidos NUL y CR/LF), separadores de ruta o caracteres de nombre como `:` que permitan rutas o flujos alternativos. Son metadatos: comprobar firma real del archivo,
 contenido malicioso, almacenamiento reservado y entrega de bytes corresponde al adaptador futuro.
 
 Sustituir un acta exige motivo y otro identificador de archivo, conserva fecha/autor y la referencia
@@ -848,18 +988,10 @@ sustancial deja causa. Origen SíseVe no significa nuevo registro, envío efectu
 Estas relaciones no crean hechos, casos o sanciones, no alteran el cierre local y no son requisito
 para documentar protección urgente. No se migra retrospectivamente un protocolo por cambiar su versión.
 
-## Revisión correctiva de los siete incrementos
-
-Esta revisión atiende los cinco puntos solicitados sin crear otro incremento ni nuevas clases Java
-productivas. Se mantienen `application`, `adapter`, POM y dependencias sin cambios. Se añadió la suite
-`CorreccionesIncrementosTest` y se ampliaron las pruebas externas; se migraron los llamadores de
-sincronización de avisos al coordinador. Las reglas de esta sección reemplazan las limitaciones
-anteriores sobre duplicados atendidos y propagación histórica indiscriminada.
-
-### 1. Reutilización e identificación en informes externos
+### Selección y reutilización de texto externo
 
 `RevisionSalida` sigue siendo la revisión institucional de la salida completa para finalidad,
-destinatario, base declarada, selección y riesgo. Su mapa `textosRevisados` es ahora un conjunto
+destinatario, base declarada, selección y riesgo. Su mapa `textosRevisados` es un conjunto
 de sustituciones opcionales: `texto(clave, original)` reutiliza el dato existente cuando no necesita
 adecuación. No se exige un texto nuevo por relato, actuación, autor, motivo, finalidad o destinatario.
 
@@ -876,122 +1008,13 @@ informes externos no violentos no se impone esa transformación ni se descarta u
 del DNI por esa regla específica. La selección/minimización sigue siendo obligatoria para ambos.
 La ausencia de DNI en violencia conserva indicación y referencia interna sin bloquear urgencia.
 
-### 2. Duplicados con atenciones existentes
+## Conciliación y confirmación de matrícula
 
-`RegistroAtenciones.relacionarDuplicados(principalId, origenId, casoContinuidad, directorio, cambio)`
-autoriza el conjunto antes de relacionar. Si ambos hechos tienen atenciones pendientes diferentes,
-exige elegir una de ellas; si existe una sola se utiliza esa. El hecho principal conserva su UUID y
-recibe las referencias a los reportes íntegros del origen, sin mezclar textos o revisiones. El origen
-sale del conjunto de hechos computables y su UUID se resuelve al canónico mediante `hechoCanonico`.
-No se crea un hecho nuevo ni se cuenta el origen como otra ocurrencia.
-
-El registro `Duplicidad` conserva el hecho de origen completo —incluidas precisiones, aclaraciones,
-relaciones y selección previas—, el principal, la atención elegida, referencias generadas, operador,
-fecha y eventual corrección. Las decisiones institucionales del origen conservan su procedencia;
-no se convierten automáticamente en nuevas decisiones del principal ni se resuelven diferencias
-por mezclar historiales. Para precisar el hecho consolidado se usa la operación institucional existente.
-
-El caso elegido mantiene una sola atención vigente del hecho. El otro conserva sus actuaciones,
-compromisos, derivaciones y referencias a acciones inmediatas, sin copiarlas. Si conserva otros
-hechos/trabajos continúa por ellos; si no, cierra técnicamente por duplicidad. Las atenciones ya
-cerradas conservan su cierre y no se reabren. Los reportes y el histórico de reservas se conservan.
-Consultas, unicidad y cobertura de derivación usan identidad canónica; una derivación preparada
-con el ID anterior puede completarse con ese mismo ID y cubrir el hecho único, sin reescribirla.
-
-`separarDuplicado(origenId, casoDelSeparado, directorio, cambio)` corrige con causa una relación
-equivocada. Recupera la identidad del origen y las versiones actuales de sus reportes, incluidas
-rectificaciones recibidas durante la relación. La historia de duplicidad se marca corregida, no
-se elimina. No reabre atenciones cerradas; una fuente que seguía pendiente recupera su hecho, y
-puede elegirse expresamente otra atención pendiente para continuarlo sin copiar actuaciones.
-Las referencias generadas solo por el error se retiran cuando no conservan contenido compartido;
-las continuidades rectificadas conservan fecha/causa y se identifican como tales en el informe,
-sin presentarlas como vigentes. Las actuaciones/documentos que sí contienen información relacionada
-mantienen su reserva.
-
-No se destruye un principal vigente: si el reporte seleccionado pertenece al origen que se separa,
-debe elegirse antes otro reporte válido que permanezca. Si el principal fue absorbido después por
-otra duplicidad, se corrige primero esa relación posterior. Son comprobaciones referenciales,
-no un procedimiento de reconciliación de contenidos o versiones.
-
-`SeguimientoInstitucional.relacionarDuplicados` y `separarDuplicado` devuelven atención y alertas
-coordinadas en la misma operación de dominio. Los avisos exclusivos del duplicado se disponen por
-duplicidad; se conserva su notificación e historia. La reiteración se recalcula con hechos únicos
-y la última configuración conservada en los fundamentos afectados, manteniendo todas las emisiones
-anteriores. Los cambios institucionales de parámetros siguen entrando por `evaluarReiteracion` con
-la configuración aprobada actual; no se inventan parámetros al identificar un duplicado.
-Corregir una disposición de duplicidad equivocada conserva esa disposición en la revisión y puede
-devolver la señal a pendiente desde la rectificación. Un cierre técnico anterior no la consume como
-atención nueva; la corrección no reabre un caso ni inventa una intervención.
-
-### 3. Reserva y corrección de vínculos
-
-La fuente de la restricción y su propagación se separan. Una prevención por reporte se ancla a su
-ID; una prevención por aclaración, al hecho. La exclusión manual se ancla al caso declarado o al
-ámbito de hechos/reportes indicado mediante el overload de `excluirUsuario`/`PoliticaAcceso.excluir`.
-Este origen debe pertenecer al contexto autorizado. Se conserva la prohibición de autoexclusión,
-autoría, fecha, motivo, retiro no propio e independencia de cada fuente de restricción.
-
-`hechosHistoricos` y `vinculos` mantienen auditoría; `hechosReservados` identifica el contenido que
-todavía revela el asunto. Retirar un vínculo erróneo sin contenido compartido no arrastra el relato
-retirado a las consultas futuras ni transmite permanentemente su exclusión a otros hechos. Si una
-actuación del caso, derivación, convocatoria o continuidad real lo conserva, se mantiene protegido.
-`contextoDeHechos` incorpora IDs de casos de reserva sin importar automáticamente todos sus otros
-hechos: consultar un hecho independiente no equivale a descargar el caso que también lo mencionó.
-
-Un informe emitido conserva las fuentes que contenía, aunque hoy se haya corregido el vínculo.
-Su consulta/emisión usa `contextoDocumento`, que añade esas fuentes y sus propietarios actuales.
-Cada revisión de acta conserva `ambitoIncorporacion`; consultar/descargar revalida ese ámbito.
-Así puede permitirse el caso independiente y seguir denegando un informe o acta anterior que contiene
-la denuncia. Una sustitución conserva los metadatos de dominio de las revisiones incorporadas,
-incluso si la entrada trae solo su contenido original; no puede modificar ese prefijo conocido.
-
-Se corrigieron tres expectativas anteriores: la prevención se ancla al reporte denunciante, el
-contexto de un hecho no copia todos los hechos de la cadena de casos y un vínculo retirado sin
-contenido compartido no mantiene una exclusión ajena sobre el asunto independiente. No se elimina
-ninguna de esas pruebas: comprueban ahora la regla correcta y se acompañan de negativos sobre fuga.
-
-### 4. Intervención completa del comité
-
-El overload de `registrarIntervencionComite` recibe decisiones (`Map<UUID,String>`), actuaciones
-con compromisos y cierre opcional junto con reunión, convocatoria, participantes y fecha efectiva.
-Autoriza una vez, valida participantes/fechas/identidades y devuelve un solo registro nuevo. Conserva
-operador real, sustitución y procedencia formal de cada decisión/actuación/cierre. No requiere guardar
-primero una reunión vacía. Si falla cualquier parte, la instancia anterior permanece íntegra.
-Las operaciones individuales existentes se mantienen para completar información posteriormente.
-
-### 5. Responsabilidades y carga acotada
-
-`CasoAtencion` decide la pertinencia temporal y material de su propia gestión. `RegistroAtenciones`
-coordina identidades, vínculos, casos y reserva. `RegistroAlertas` conserva señales, fundamentos,
-disposiciones y avisos; se retiró su dependencia de `RegistroAtenciones` y su antiguo método
-`sincronizarAtenciones`. `SeguimientoInstitucional` es el único coordinador entre ambos estados.
-El overload `actualizar(..., hechosModificados, ...)` omite asuntos independientes y comprueba
-fechas únicamente de las señales y atenciones pertinentes. No entrega mensajes ni realiza I/O.
-
-`RegistroAtenciones.cargarAmbito` recibe hechos/casos relevantes, acciones inmediatas, restricciones,
-relaciones de duplicidad y un `Indice` autoritativo de reserva/unicidad (IDs). Mantiene referencias
-a casos no cargados para comprobar conflictos y rechazar otra atención pendiente sin necesitar
-sus actuaciones completas. Recalcula las entradas de los casos modificados y conserva las demás.
-Para decidir continuidad sí exige cargar la atención que debe modificarse; para consultar un
-antecedente, su contenido. `RegistroAlertas.cargarAmbito` recibe solo episodios/avisos afectados,
-incluyendo la historia pertinente de esos orígenes, no todas las señales del colegio.
-
-Estos constructores reconstituyen estados confiables; no son entradas de cliente ni autorizaciones.
-La futura persistencia debe aportar un índice completo para los IDs afectados, fuente actual de
-restricciones/designaciones, versión consistente, unicidad y transacción. Debe guardar los cambios
-por identidad y no reemplazar datos no cargados con una colección parcial. No se introduce un
-repositorio, una base de datos ni casos de uso para suplir ese contrato.
-
-## Incremento 8A: conciliación y confirmación de matrícula
-
-Fecha: 22 de octubre de 2026. ERS v1.2: RF-06, RF-08–11, RN-17–18 y parte de CU-01.
-Es un bloque de dominio del monolito hexagonal: no incorpora aplicación, puertos, persistencia,
-parser Excel, interfaz, contactos ni antecedentes contextuales. No declara completado el bloque
-entero de importación ni la aceptación de CU-01. Se conservan intactas las APIs productivas anteriores.
+Base: ERS v1.2, RF-06, RF-08–11, RN-17–18 y CU-01. `RegistroMatriculas` coordina identidad y matrícula sobre filas tipadas; `RegistroImportacion` añade contexto, contactos, configuración admitida e historia a la misma confirmación. No hay parser Excel, persistencia ni interfaz.
 
 ### Tipos y operaciones
 
-Todos los archivos nuevos están en `pe.edu.incidencias.domain.estudiante`.
+Los tipos están en `pe.edu.incidencias.domain.estudiante`.
 
 | Tipo | Contrato |
 |---|---|
@@ -1048,15 +1071,17 @@ La fecha efectiva pertenece expresamente al año seleccionado, también históri
 informado en una fila es expreso; el grupo común es un valor por defecto que completa lo desconocido,
 pero conserva el grupo ya conocido en esa fecha y lo avisa. Grupo ausente produce aviso de cobertura,
 no impide identidad/año ni crea trabajo para TOE. La resolución de variantes textuales de grado/sección
-y la validación contra el catálogo institucional siguen fuera de este bloque.
+se aplica mediante `GrupoEscolar.equivalenteA`; la validación contra el catálogo institucional la realiza la entrada pública de `RegistroImportacion`.
 
 Un cambio posterior de grupo conserva fechas anteriores. Grupo contradictorio en la misma fecha
 continúa requiriendo rectificación explícita y queda como error: no se sortea la regla reemplazando
-todo el historial. La rectificación de este caso y los borrados expresos quedan pendientes. Tampoco
+todo el historial. `RectificacionMatricula` permite esa sustitución y los borrados expresos revisados. Tampoco
 se modifica el grupo histórico que ya guardó una incidencia. Nacimiento posterior a fecha efectiva
 de matrícula se señala como error localizable.
 
 ### Confirmación, permisos y reintentos
+
+El reintento exige también el autor de la confirmación original cuando se recibe una previsualización procedente de otra instantánea. Usar el mismo ID y contenido no permite a otro operador recuperar el resultado.
 
 Tanto revisar como confirmar requieren `IMPORTAR_NOMINA` con `PoliticaAcceso` actual, limitado
 al AIP vigente. La confirmación revalida el rol/cuenta, exige al mismo AIP que revisó y una fecha
@@ -1098,13 +1123,13 @@ propuesta obsoleta en memoria no reemplaza la transacción ni impide dos escritu
 en una base de datos. No serializar los agregados históricos internos como respuesta al AIP.
 El código conserva estado/autor/fecha/procedencia, pero todavía no garantiza guardado durable.
 
-| ERS | Cobertura 8A | Pendiente |
+| ERS | Cobertura de dominio | Integración pendiente |
 |---|---|---|
-| RF-06; RN-17 | Identidad estable, año explícito, omisiones, historial y grupo común no destructivo | Contactos/contexto y rectificación contradictoria en la misma fecha. |
-| RF-08–09; RN-18 | Lote de campos tipados, hoja/fila, año/fecha efectiva, resultados, cobertura de grupo y conflictos de identidad | Parser `.xlsx`, asociación/reutilización de encabezados y rangos; títulos/etapas, filas de orden, celdas combinadas, fórmulas y errores de formato por celda. |
-| RF-10 | Previsualización sin cambios, confirmación AIP, resultados, autor/fecha/procedencia, reintento por ID/huella, sin actualización parcial en memoria | Transacción durable, borrados expresos y actualización selectiva de contactos/contexto. |
-| RF-11 | Documento seguro interanual, homónimos/contradicciones resueltos expresamente, unicidad contra padrón completo | Conciliación persistente concurrente, rectificación excepcional RF-39; no fusión universal. |
-| CU-01 | 91 filas tipadas ficticias, altas sin grupo y repetición sin duplicados, más casos negativos | No se reproduce aún el libro de 121 filas/17 columnas ni se acepta el caso de uso completo. |
+| RF-06; RN-17 | Identidad/año estables, omisiones no destructivas, grupo común, historia, contactos/contexto y rectificación expresa. | Persistencia y vistas según permisos. |
+| RF-08–09; RN-18 | Campos tipados, asociación revisada de encabezados, hoja/fila, alcance, previsualización y errores localizados. | Leer el libro, rangos, títulos/etapas, celdas combinadas, fórmulas guardadas y formatos por celda. |
+| RF-10 | Confirmación conjunta AIP, procedencia, resultados, reintento por ID/huella, rectificación/borrados y contexto selectivo. | Transacción durable y concurrencia. |
+| RF-11 | Coincidencia documental interanual segura, homónimos/contradicciones expresos y unicidad contra padrón completo. | Coordinación concurrente de identidad en almacenamiento. |
+| CU-01 | Escenarios con filas tipadas ficticias, incluida muestra de 91 identidades y pruebas negativas. | Aceptación del libro físico y del flujo de usuario completo. |
 
 El constructor de `DocumentoIdentidad` sigue validando ocho dígitos de DNI. El adaptador futuro
 debe convertir valores numéricos completos a texto y reportar por celda los inválidos **antes** de
@@ -1113,36 +1138,18 @@ Un nombre vacío seleccionado se presenta como error de fila; no se lo convierte
 Las filas de título/etapa deben descartarse en el adaptador: este modelo no pretende reconocerlas
 a partir de texto libre ni declara que toda cadena no vacía represente a un estudiante.
 
-### Pruebas y estado estable de entrega
+### Pruebas y límites
 
-Se añaden dos suites: `ConciliacionMatriculaTest` (11 pruebas) y `RegistroMatriculasTest`
-(30 pruebas). Cubren normalización, documento seguro/ambiguo/contradictorio, nacimiento,
-homónimos, UUID elegido/suministrado, duplicados con filas inválidas y orden inverso, exclusión,
-grupo ausente/común/histórico, omisiones, continuidad anual, altas/actualizaciones/sin cambios,
-errores sin efectos parciales, previsualización obsoleta, reintento después de reconstitución,
-ID de lote alterado, revocación AIP, cuenta desactivada, autor ajeno, fechas y copias inmutables.
-Los datos son ficticios; la prueba de 91 identidades no utiliza matrícula real.
+`ConciliacionMatriculaTest` y `RegistroMatriculasTest` cubren documento seguro/ambiguo/contradictorio, nacimientos, homónimos, UUID propuesto/elegido, conflictos entre filas, exclusión, grupos ausentes/comunes/históricos, omisiones, rectificación, previsualización obsoleta, reintento tras reconstitución, reutilización de ID, revocación AIP, autor ajeno, fechas e inmutabilidad. La muestra de 91 identidades usa datos ficticios. La ejecución vigente figura en «Verificación reproducible».
 
-Verificación limpia del 22-10-2026 desde la carpeta backend, Windows/PowerShell, Oracle JDK 27,
-Maven Wrapper 3.9.16, compilación `release 25`, POM sin cambios:
+## Importación selectiva, contactos y contexto
 
-```powershell
-$env:JAVA_HOME = 'C:\Program Files\Java\jdk-27'
-.\mvnw.cmd -B -o clean test
-```
-
-**BUILD SUCCESS: 455 pruebas, 0 fallos, 0 errores y 0 omitidas**, incluidas las 414 anteriores.
-Se compilaron desde limpio 69 archivos productivos y 31 de pruebas, 30 suites más un auxiliar.
-Las pruebas no certifican persistencia, parser, rendimiento ni aceptación integral de importación.
-La rama de entrega es `feature/domain-importacion-matricula`; el documento se actualiza localmente
-y el README versionado resume el contrato para revisión remota.
-
-## Entrega de dominio: importación selectiva y contexto
-
-Se amplía la base 8A, conservando el modelo inmutable y las reglas de identidad/matrícula.
+`RegistroImportacion` coordina matrícula y contexto conservando identidad, historia e inmutabilidad.
 No hay infraestructura, lectura de Excel, I/O ni transacciones de base de datos en estas clases.
 
 ### Contratos y recorrido
+
+Los errores de grupo/contexto se pasan a `RegistroMatriculas.previsualizar` sin construir un lote filtrado intermedio. Todas las filas originales no excluidas participan en la detección de documentos repetidos, aunque alguna tenga otro error; no gana la fila restante por haberse ocultado su contradicción. Una fila excluida expresamente no invalida el lote por su grupo. La confirmación comprueba que los grupos de las filas aceptadas sigan admitidos; si cambió la configuración, exige nueva revisión antes de devolver estado.
 
 1. La institución define `AlcanceImportacion`: versión identificada, referencia institucional y
    conceptos admitidos con clave estable, etiqueta comprensible, tipo y fundamento documentado.
@@ -1158,8 +1165,8 @@ No hay infraestructura, lectura de Excel, I/O ni transacciones de base de datos 
    columnas seleccionadas. `FilaContexto` distingue valores aportados y claves de borrado expreso.
    `Familiar`, `Texto` y `Antecedente` evitan intercambiar arbitrariamente contactos y antecedentes.
 4. `RegistroImportacion.previsualizar(lote, configuracion, politica, autor, fecha)` comprueba alcance
-   vigente, configuración no futura, año conocido y grupos admitidos. Luego usa la conciliación 8A.
-   Un contexto no admitido o mal asociado excluye **la fila completa** antes de confirmar matrícula;
+   vigente, configuración no futura, año conocido y grupos admitidos. Usa la conciliación de matrícula sobre todas las filas originales.
+   Un contexto no admitido/mal asociado o un grupo de fila no admitido producen error localizado en **la fila completa** antes de confirmar matrícula;
    no modifica identidad/grupo/documento aunque esas partes fueran válidas. Las demás filas aceptables
    pueden incorporarse. La propuesta es privada, ligada a la instantánea y al operador que revisó.
 5. `confirmar(vista, configuracion, politica, cambio)` vuelve a validar configuración y permisos y
@@ -1208,14 +1215,11 @@ La política actual comprueba bloqueo jurídico por persona al conciliar, confir
 también al consultar resultados y contexto. Una propuesta producida antes de un bloqueo no autoriza
 guardar después. Para confirmar luego de retirada del rol se vuelve a evaluar AIP vigente.
 
-La revisión final corrige el recuento para separar altas y actualizaciones aun si el alta trae
-contexto. También distingue homónimos con documentos diferentes: una identidad bloqueada no
+El recuento separa altas y actualizaciones aunque el alta incluya contexto. Los homónimos con documentos diferentes permanecen separados: una identidad bloqueada no
 impide actualizar otra con documento seguro ni confirmar un alta expresamente distinta. Si hace
 falta conciliación por nombre, los candidatos bloqueados se sustituyen por un aviso sin ID,
 nombre ni documento. Sin documento en el candidato bloqueado no se permite eludir el bloqueo
-forzando un alta; requiere resolución institucional. Se agregan tres regresiones de estas variantes
-y una aserción sobre cantidades. No se ejecutó Maven en paralelo; la verificación final conjunta
-debe recogerlas, por lo que la suite RegistroImportacion pasa de 25 a 28 métodos de prueba.
+forzando un alta; requiere resolución institucional.
 
 ### Rectificaciones de matrícula
 
@@ -1226,41 +1230,55 @@ No se puede aportar y borrar el mismo dato. No se sustituye grupo sin suministra
 La sustitución/borrado en una fecha no reescribe grupos posteriores ni instantáneas de incidencias.
 Un grupo común del lote no repone silenciosamente un grupo borrado expresamente.
 
-El resumen de cambios 8A muestra los campos cambiados; el coordinador contextual conserva además
+El resumen de matrícula muestra los campos cambiados; el coordinador contextual conserva además
 la solicitud revisada en su resultado por fila. La huella del lote incorpora también esas solicitudes.
 La huella contextual usa SHA-256 con longitudes y marcadores de presencia, campos tipados y
 ordenación de claves, sin conservar los datos descartados en las confirmaciones.
 
-### Verificación y límites
+### Pruebas y límites
 
-Suites: `RegistroImportacionTest`, `AsociacionColumnasTest`, más regresión completa de 8A y estudiante.
-Ejecución verificada con JDK 27 y compilación `release 25`: **88 pruebas, 0 fallos, 0 errores,
-0 omitidas**. Corresponden a 25 de RegistroImportacion, 6 de AsociacionColumnas, 30 de
-RegistroMatriculas, 11 de ConciliacionMatricula y 16 de Estudiante. Comando desde backend:
-`./mvnw.cmd -B -o -Dtest=RegistroImportacionTest,AsociacionColumnasTest,RegistroMatriculasTest,ConciliacionMatriculaTest,EstudianteTest test`.
-Se cubren transacción pura sin filas parciales, contexto admitido, compatibilidad de asociaciones,
-contactos compartidos/separados, omisiones, negaciones, procedencia, sustitución sin filtrar datos,
-borrado delimitado, historia reservada, reintento/huella, obsolescencia y autorías, configuración
-vigente, exclusión institucional, bloqueo posterior a previsualización y rectificación de grupos.
+`RegistroImportacionTest` y `AsociacionColumnasTest` cubren confirmación sin filas parciales, alcance admitido, asociaciones, contactos separados/compartidos, omisiones y negaciones, procedencia, sustitución/borrado delimitados, historia reservada, huellas/reintentos, obsolescencia/autoría, configuración vigente, bloqueo posterior a previsualización y rectificaciones que preservan grupos posteriores. Se comprueban errores por fila sin ocultar conflictos documentales del lote original. El resultado actual está en «Verificación reproducible».
 
-Esta entrega no lee `.xlsx`, no normaliza grupos textuales como «1° A» ni convierte números/fechas de
+El dominio no lee `.xlsx`, no normaliza grupos textuales como «1° A» ni convierte números/fechas de
 Excel, no calcula fórmulas y no detecta filas de títulos o numeración. Eso se implementará en el
 adaptador Excel, entregando campos tipados y asociaciones revisadas a estas reglas. No hay controles
 de sesión, base de datos, archivo temporal, persistencia, HTTP ni borrado físico. Las capacidades de
 dominio existen; la aceptación integral de CU-01 exige probar ese adaptador y la transacción real.
 
-
-## Entrega del dominio de consultas y estadística — 22 de octubre de 2026
+## Consultas, historial y estadística
 
 Paquete `pe.edu.incidencias.domain.consulta`; no depende de Spring, persistencia, generación de archivos ni reloj del sistema. Extiende RF-16, RF-34–37 y la consistencia RNF-19. No implementa un motor de consultas de texto libre, comunicación externa automática ni adaptación PDF/CSV/XLSX.
 
 ### Contratos y carga
+
+`ConsultaHistorial(registro, hechosCargados, politicaActual)` no necesita un padrón: consulta identidades y grupos conservados en los hechos. Las fuentes de sus resultados se autorizan individualmente. Los casos relacionados se proyectan solo si se permite su ámbito completo, aplicando también las restricciones propias del registro. `MotorEstadisticas` usa el mismo criterio para estado de atención e intervención de comité; un hecho permitido no revela un caso restringido por otra fuente.
 
 - `ConsultaEstadistica` declara medida, período inclusivo, agrupaciones y filtros. Las dimensiones se combinan con AND; los valores de una dimensión con OR. Las colecciones son copias inmutables. Rechaza agrupaciones duplicadas y dimensiones específicas sin pertinencia (motivo solo para señales, entidad solo derivaciones, tipo de cierre solo casos y hora solo hechos/participaciones/estudiantes).
 - `MotorEstadisticas` recibe `RegistroAtenciones`, `RegistroAlertas`, `RegistroMatriculas`, IDs de **hechos** cargados y `PoliticaAcceso` actual. No recibe cifras calculadas por cliente. La aplicación debe cargar un universo completo para la consulta requerida y sus relaciones de reserva; el dominio no puede demostrar que una muestra sea toda la institución. Valida que las fuentes de casos/señales cargados estén presentes. Los IDs absorbidos por relaciones del registro se normalizan; un ID de reporte manualmente vinculado no es necesariamente un ID de hecho cargado.
 - La política recibida debe ser actual, construida con directorio, restricciones y `registro.proteccion()`. Además se consulta la protección/restricción del propio registro. No se reinstancia una política vacía para autorizar lecturas. El rol se exige aun con universo vacío. Una exclusión o bloqueo no produce ni título ni cifra separada de lo omitido.
 
 ### Unidades y recuentos
+
+Las medidas disponibles y su fecha de asignación al período son:
+
+| Medida | Unidad y criterio temporal |
+|---|---|
+| `HECHOS` | Hechos únicos, por fecha del hecho. |
+| `COMUNICACIONES` | Reportes válidos, por fecha de registro. |
+| `PARTICIPACIONES` | Una persona por hecho, por fecha del hecho; incluye personas no estudiantes. |
+| `ESTUDIANTES` | Identidades escolares distintas involucradas, por fecha del hecho. |
+| `ESTUDIANTES_COTIDIANA`, `ESTUDIANTES_PRESUNTA`, `ESTUDIANTES_CORROBORADA`, `ESTUDIANTES_AFECTADOS`, `ESTUDIANTES_TESTIGOS` | Estudiantes distintos con el papel correspondiente, por fecha del hecho. |
+| `CASOS_PENDIENTES` | Atenciones pendientes, por apertura. |
+| `CASOS_CERRADOS`, `CASOS_RESUELTOS` | Atenciones cerradas, por fecha de cierre; resueltos excluye apertura errónea y duplicidad. |
+| `ALERTAS_EMITIDAS`, `ALERTAS_GESTIONADAS`, `ALERTAS_PENDIENTES` | Señales según su condición, por emisión. |
+| `ACTUACIONES_REALIZADAS`, `ACTUACIONES_PREVISTAS` | Actuaciones, por fecha efectiva o prevista respectivamente. |
+| `COMPROMISOS` | Compromisos no cancelados, por acuerdo. |
+| `COMPROMISOS_PENDIENTES`, `SEGUIMIENTOS_PENDIENTES` | Compromisos con seguimiento pendiente, por acuerdo; no son tareas adicionales independientes. |
+| `COMPROMISOS_COMPROBADOS` | Compromisos con cumplimiento/no cumplimiento observado, por última observación. |
+| `SEGUIMIENTOS_COMPROBADOS` | Revisiones con observación de cumplimiento/no cumplimiento, por fecha de observación. |
+| `DERIVACIONES_EFECTIVAS` | Derivaciones efectuadas, por fecha efectiva. |
+
+`ALERTAS_PENDIENTES` agrupa y filtra por motivos vigentes; `ALERTAS_EMITIDAS` y `ALERTAS_GESTIONADAS` conservan los motivos históricos de sus revisiones. Retirar gravedad del fundamento vigente no la presenta como motivo todavía pendiente.
 
 Hay 23 medidas comprobadas con fixture común: hechos, comunicaciones, participaciones, estudiantes distintos y los cinco subconjuntos por papel (cotidiana, presunta, corroborada, afectados, testigos); casos pendientes/cerrados/resueltos; señales emitidas/gestionadas/pendientes; actuaciones realizadas/previstas; compromisos totales/pendientes/comprobados, seguimientos pendientes/comprobados y derivaciones efectivas.
 
@@ -1270,7 +1288,15 @@ Los casos cerrados incluyen cierre técnico identificado con `TIPO_CIERRE`; `CAS
 
 ### Tiempo, grupos y falta de datos
 
-El criterio temporal está declarado en `Medida.criterioTemporal`: hecho para hechos/participaciones/estudiantes, registro para comunicaciones, apertura o cierre para casos, emisión para señales, fecha efectiva/prevista para actuaciones, acuerdo para compromisos y observación para comprobaciones, fecha efectiva para derivaciones. Los grupos provienen del **snapshot `Participacion.grupoHistorico`**, no se rellenan ni reescriben desde el padrón actual. Aportes contradictorios se separan como `DISCREPANTE`; falta de información como `NO_INFORMADO`. Sexo solo procede de dato explícito de la identidad al corte y no se infiere del nombre. Una fecha aproximada permite año/mes de referencia pero no día de semana ni hora exacta. Hora solo se publica si las fuentes activas coinciden y la fecha es exacta; no se deriva de fecha de registro.
+`ConsultaEstadistica` admite agrupaciones y filtros sobre `ANIO`, `MES`, `DIA_SEMANA`, `HORA`,
+`ANIO_ESCOLAR`, `CATEGORIA`, `NATURALEZA`, `GRAVEDAD`, `GRADO`, `SECCION`, `SEXO`, `TIPO_PERSONA`,
+`PAPEL`, `ATRIBUCION`, `ESTADO_ATENCION`, `MOTIVO_ALERTA`, `ENTIDAD_DERIVACION`,
+`INTERVENCION_COMITE`, `PRECISION_FECHA` y `TIPO_CIERRE`. Los filtros entre dimensiones se combinan
+con AND y los valores dentro de una dimensión con OR. Motivo solo corresponde a señales, entidad
+a derivaciones, tipo de cierre a casos y hora a hechos/participaciones/estudiantes. Una dimensión
+específica no pertinente o una agrupación repetida se rechazan; no se ignoran silenciosamente.
+
+El criterio temporal está declarado en `Medida.criterioTemporal`: hecho para hechos/participaciones/estudiantes, registro para comunicaciones, apertura o cierre para casos, emisión para señales, fecha efectiva/prevista para actuaciones, acuerdo para compromisos y observación para comprobaciones, fecha efectiva para derivaciones. Los grupos provienen del **snapshot `Participacion.grupoHistorico`**, no se rellenan ni reescriben desde el padrón actual. Los datos conocidos complementarios se combinan: omitir un grupo u hora en un duplicado no contradice el valor aportado por otra fuente. Variantes de grupo equivalentes por tildes/mayúsculas/espacios conservan la primera forma declarada. Valores conocidos realmente distintos se separan como `DISCREPANTE`; ausencia de valores como `NO_INFORMADO`. Sexo solo procede de dato explícito de la identidad al corte y no se infiere del nombre. Una fecha aproximada permite año/mes de referencia pero no día de semana ni hora exacta. Hora solo se publica si los valores conocidos de las fuentes activas coinciden y la fecha es exacta; no se deriva de fecha de registro.
 
 Las celdas sustentan cruces, frecuencias, ordenación por frecuencia, comparación entre períodos, gráficos de evolución y mapa de calor por día. La representación gráfica pertenece al adaptador. El resultado conserva criterio, período, corte, cobertura de unidades evaluadas y unidades sin dato, diferenciados de cero. `comparar` mantiene medida/dimensiones/filtros y cambia exclusivamente el período.
 
@@ -1282,23 +1308,23 @@ Las celdas sustentan cruces, frecuencias, ordenación por frecuencia, comparaci�
 
 ### Historial y salidas
 
+La búsqueda de persona usa la misma normalización de tildes, mayúsculas y espacios Unicode que la búsqueda escolar, tanto en historial institucional como en aportes propios. Para hechos anulados, persona, fecha del hecho y criterios deben coincidir en la misma revisión histórica y el período de registro en su reporte; no se combinan datos de versiones distintas. Se usa el estado actual autorizado del caso (`PENDIENTE`, `CERRADA`, `SIN_ATENCION`), sin crear participaciones vigentes ni reincorporar anulaciones a las estadísticas.
+
 `ConsultaHistorial` consulta por identidad conocida o descripción conocida de persona, fechas de hecho/registro, clasificación, gravedad, año/grupo snapshot y estado de atención. No fusiona nombres similares ni crea padrón externo. Ordena cronológicamente, ofrece tramos de 1 a 500 y deduplica hechos/casos/actuaciones/derivaciones; incluye procedencia desde el agregado y participaciones consolidadas. Cada fuente y caso se autoriza antes de proyectar. El acceso ordinario a un aporte propio usa la proyección reducida existente de `PoliticaAcceso`.
 
-`ResultadoEstadistico` es un corte inmutable creado por el motor, con fuentes de reserva y recursos internos para autorización; las tablas no publican dichos metadatos. `SalidaEstadistica` conserva corte y autor/fecha de emisión. Preparar salida interna exige autorización y mantiene cifras exactas, incluso uno; no aplica umbral arbitrario. La externa exige finalidad, base institucional declarada, destinatario, evaluación de riesgo resuelta y responsable/instante de revisión coherentes con emisión. Una salida identificable pendiente se rechaza; el responsable puede recalcular con agrupaciones más amplias antes de revisarla. El software no determina legitimación jurídica.
+`ResultadoEstadistico` es un corte inmutable creado por el motor, con fuentes de reserva y recursos internos de todas las unidades evaluadas, incluidas las que aportan solo cobertura aunque no pasen el filtro/período; las tablas no publican dichos metadatos. `SalidaEstadistica` conserva corte y autor/fecha de emisión. Preparar salida interna exige autorización y mantiene cifras exactas, incluso uno; no aplica umbral arbitrario. La externa exige finalidad, base institucional declarada, destinatario, evaluación de riesgo resuelta y responsable/instante de revisión coherentes con emisión. Una salida identificable pendiente se rechaza; el responsable puede recalcular con agrupaciones más amplias antes de revisarla. El software no determina legitimación jurídica.
 
 Descargar en cualquiera de los tres formatos revalida política/controles vigentes sobre salida, recursos y todas sus fuentes y casos, incluidos cierres actuales de relaciones de reserva y referencias conservadas. Si falla una fuente, se rechaza la salida completa: no se entrega silenciosamente un corte viejo parcial. Las tablas contienen solo dimensiones solicitadas y cantidad, sin relatos ni nombres/DNI ni columnas ocultas. Los valores con prefijos de fórmula se neutralizan; el adaptador debe escapar correctamente CSV/XLSX y generar los bytes. Persistir emisión/descarga y evidencia de acceso corresponde a aplicación/adaptadores y su contrato transaccional.
 
-### Verificación
+### Pruebas y límites
 
-`mvnw.cmd -B -o test -Dtest=pe.edu.incidencias.domain.consulta.*Test` con JDK 27 / release 25: **50 ejecuciones, 0 fallos, 0 errores, 0 omitidas**. Incluye 23 casos parametrizados (todas las medidas), deduplicación y personas de duplicados, familiares, discrepancia, anulaciones, tres dimensiones/filtros combinados, snapshots, precisión temporal, denominador inválido, no duplicación de estudiantes, tres formatos, revisión externa, acceso propio, exclusión sobrevenida y regresión de actuación real tras anulación de la última fuente. Las pruebas son ficticias. La corrida completa del proyecto la coordina el agente principal.
+`MotorEstadisticasTest`, `ReconciliacionMedidasTest`, `HistorialYSalidaTest` y `AuditoriaConsultasTest` comprueban las 23 medidas con un conjunto conocido, filtros/cruces, deduplicación, familiares/personas de duplicados, discrepancias y anulaciones, grupos históricos, horas fiables, cohorte/denominador, tres formatos, revisión externa, acceso propio, exclusión y bloqueo sobrevenidos. Se comprueba la reserva de cobertura fuera del período y de casos compartidos, y la conjunción de filtros por revisión anulada.
 
-El historial también localiza hechos anulados mediante revisiones históricas de la persona: devuelve `hecho.anulado() == true`, participaciones vigentes vacías y actuaciones reales conservadas. No reactiva personas ni hechos para estadísticas. `buscarAportesPropios` (RF-15) permite al autor filtrar y paginar estudiante, fechas, categoría, año/grupo y relación de atención usando únicamente sus revisiones visibles; no utiliza correcciones institucionales ajenas como canal lateral.
+El historial devuelve las anulaciones con `hecho.anulado() == true`, participaciones vigentes vacías y actuaciones reales conservadas. `buscarAportesPropios` filtra/pagina usando únicamente las revisiones visibles del autor; las correcciones institucionales ajenas no sirven como canal lateral. Los límites de persistencia, generación de bytes y aceptación de interfaz se detallan en «Contratos obligatorios de integración».
 
+## Protección, disposición de datos y evidencia
 
-## Entrega local: protección, disposición y evidencia
-
-Fecha: 22 de octubre de 2026. Fuente de implementación: ERS v1.2, RF-28, RF-38–39,
-RN-24–26 y RNF-02, RNF-07, RNF-18. Este documento es local y no se publica.
+Base: ERS v1.2, RF-28, RF-38–39, RN-24–26 y RNF-02, RNF-07, RNF-18. El modelo expresa decisiones institucionales delimitadas; no añade un rol con acceso general.
 
 ### Modelo y autorizaciones
 
@@ -1341,9 +1367,7 @@ autorizar una población; los elementos de atención siempre requieren su contex
 
 `RegistroAtenciones.iniciar` y `cargarAmbito` tienen sobrecargas con el control; `conProteccion`
 permite incorporar su instantánea vigente al reconstruir datos. Las transiciones, copias,
-duplicidades y separaciones conservan el control. `proteccion()` amplía su cierre mediante
-`conRelaciones`: IDs de actuaciones, compromisos de todas sus revisiones, derivaciones y
-acciones inmediatas, y personas referidas en ellas, se relacionan con su ámbito. Un bloqueo
+duplicidades y separaciones conservan el control. Cada nueva instantánea calcula `proteccionEfectiva` mediante `conRelaciones`: IDs de actuaciones, compromisos de todas sus revisiones, derivaciones, convocatorias, intervenciones/decisiones del comité y acciones inmediatas, y personas referidas en ellas, se relacionan con su ámbito. Un bloqueo
 de un recurso embebido protege el conjunto que lo revela. `casoDisponible` permite filtrar
 sin exponer contenido; no concede autorización. Las listas de actuaciones aceptan también
 una política actual aportada por consultas y comprueban el control propio del registro.
@@ -1408,6 +1432,8 @@ No se afirma aquí que ya exista borrado físico de una base de datos o de PDF/D
 
 ### Evidencia mínima y extracción restringida
 
+Las personas seleccionadas en los criterios deben estar incluidas en el alcance declarado del evento. `extraer` comprueba también el bloqueo del ID del propio evento, además de sus personas, recursos y ámbito; un criterio no amplía una autorización institucional.
+
 `RegistroEvidencia` conserva `Evento` con usuario, fecha, operación, resultado, ámbito,
 criterios tipados e ID relacionado. Admite sesiones, consulta, creación, modificación,
 anulación, eliminación, importación, exportación, extracción de evidencia y recuperación.
@@ -1416,7 +1442,7 @@ Los criterios conservan intervalo, año y referencias seleccionadas sin copiar f
 
 `registrar` devuelve un nuevo registro disponible inmediatamente; mismo ID/contenido es
 idempotente, ID reutilizado con contenido distinto se rechaza. `cargar` reconstituye una
-instantánea validando unicidad y orden cronológico. La evidencia no debe quedar sin ámbito:
+instantánea validando unicidad y orden cronológico en una sola pasada de coste lineal; no reconstruye ni copia acumulativamente cada prefijo de la historia. La evidencia no debe quedar sin ámbito:
 una sesión puede referirse al recurso/cuenta de la operación; una operación de caso debe
 conservar sus referencias efectivas, también al exportar o ejecutar disposición.
 
@@ -1455,65 +1481,20 @@ protección contra alteración del almacenamiento y recuperación se verifican a
 6. Mantener respaldos antiguos aislados hasta su vencimiento; antes de restaurar acceso
    ordinario, reponer designaciones/restricciones y todas las decisiones posteriores válidas.
 
-### Verificación
+### Pruebas y límites
 
-Las suites propias son `ProteccionDatosTest` y `BloqueoJuridicoIntegracionTest`. Cubren:
-autorizaciones delimitadas, cuenta/vigencia, no autoatribución funcional, bloqueo explícito,
-levantamiento, decisiones futuras, recursos y versiones, transformación selectiva sin pérdida
-de terceros, copia operativa persistente, inventario incompleto, retenciones, comprobación
-de resultado, evidencia idempotente, extracción trazada/restringida, reconstitución y retiro
-autorizado tras el mínimo. La integración prueba todos los permisos con ámbito, revocación
-de informe y descarga directa de acta ya existentes, revisión histórica, propagación de
-controles en transiciones y bloqueo de compromiso embebido también en bandeja.
+`ProteccionDatosTest` y `BloqueoJuridicoIntegracionTest` comprueban mandatos delimitados, vigencias, bloqueo/levantamiento, fuentes/recursos históricos y anidados, decisiones futuras, transformación selectiva y terceros, manifiesto incompleto, retenciones, relectura exacta, evidencia idempotente, extracción restringida y retiro tras el mínimo. Se comprueba revocación de informes/actas ya existentes y de recursos proyectados en ellos. El resultado vigente está en «Verificación reproducible».
 
-Comando desde backend (PowerShell):
+### Validación del contenido candidato
 
-```powershell
-$env:JAVA_HOME = 'C:\Program Files\Java\jdk-27'
-.\mvnw.cmd -B -o '-Dtest=ProteccionDatosTest,BloqueoJuridicoIntegracionTest' test
-```
+Las actualizaciones de hechos, casos y acciones inmediatas comprueban el control del estado
+candidato antes de devolverlo. Autorizar el estado anterior no permite incorporar una persona
+o recurso ya bloqueado en un ámbito antes disponible. Si el nuevo contenido no está permitido,
+se rechaza el cambio y la instantánea anterior permanece íntegra.
 
-La primera ejecución verificó 49 pruebas sin fallos ni errores. Después se añadieron
-reconstitución/retiro de evidencia y recurso anidado, y se retiraron cinco ejecuciones
-parametrizadas sin ámbito que no ejercían el bloqueo. El resultado definitivo se integra
-en la verificación conjunta del documento principal; no se presupone por compilar.
+## Configuración institucional y selección contextual para informes
 
-### Complemento RF-05 y comprobación del contenido candidato
-
-`PersonaInvolucrada` admite contacto textual y documento opcionales para personal, familiares
-y externos, mediante constructor de siete parámetros. El constructor anterior de cinco
-parámetros conserva compatibilidad y no inventa datos, cuenta ni representación legal.
-Los datos escolares del estudiante siguen en su agregado: no se duplican documento/contacto
-en cada referencia de participación. La validación de `DocumentoIdentidad` conserva ceros.
-
-La consolidación de una misma persona recupera un contacto/documento solo cuando existe un
-único valor conocido entre sus fuentes. Si discrepan no escoge el primero: los aportes
-conservan cada valor y `datosPersonalesDiscrepantes` señala la diferencia, sin convertirla
-en discrepancia de responsabilidad para reiteración. El informe interno conserva esos
-datos en cada fuente y en la persona consolidada cuando son inequívocos.
-
-El informe externo no copia automáticamente contactos/documentos de personas externas,
-incluso si la persona está admitida. `RevisionSalida` agrega selecciones expresas por ID
-(`contactosAdmitidos`, `documentosExternosAdmitidos`) y exige que esos IDs estén admitidos
-como personas. El constructor anterior inicializa ambas selecciones vacías. Si un relato
-repite un contacto/documento no seleccionado, exige adecuarlo antes de salir. Estas reglas
-no modifican la regla previa de iniciales/DNI del estudiante para violencia externa.
-`PersonaExternaDatosTest` añade cuatro pruebas de mínimos, duplicados, discrepancias y
-selección interna/externa sin fuga por las fuentes del informe.
-
-Las actualizaciones de hechos, casos y acciones inmediatas comprueban también el control
-del estado candidato antes de devolverlo. Autorizar solamente el estado anterior habría
-permitido introducir una persona/recurso ya bloqueado en un ámbito antes disponible. La
-regresión prueba el rechazo del hecho y del compromiso nuevos, conservando el registro previo.
-
-Conteo propio esperado tras estos complementos: 52 ejecuciones (21 protección, 27 integración
-de bloqueo y cuatro RF-05). Pendiente la ejecución limpia conjunta del agente principal.
-
-
-## Configuración institucional y selección contextual para informes: continuación final
-
-Fecha: 22 de octubre de 2026. Este bloque completa reglas de RF-02–03, RF-31 y RF-40
-que faltaban al cerrar 8A. No introduce una aplicación, puertos o adaptadores.
+Base: RF-02–03, RF-31 y RF-40. No introduce una aplicación, puertos o adaptadores.
 
 ### Configuración versionada
 
@@ -1526,7 +1507,7 @@ roles sin la capacidad correspondiente.
 
 `DefinicionInstitucional` expresa valores decididos, no columnas detectadas en una fuente.
 TOE/director con `DEFINIR_CONFIGURACION` pueden crear o definir directamente. Las categorías
-incluidas se crean/actualizan/activan/desactivan con sus APIs anteriores; las omitidas permanecen,
+incluidas se crean/actualizan/activan/desactivan con sus APIs; las omitidas permanecen,
 sin perder historia ni reclasificar hechos. La ventana puede retirarse expresamente y se conserva
 su historia. Aviso y alcance opcionales representan ausencia explícita; sin alcance admitido
 no se habilita la importación contextual pública. No hay sanciones ni reglas arbitrarias.
@@ -1542,8 +1523,10 @@ ya aplicada devuelve el estado actual sin volver a pisar valores posteriores.
 
 `registrarAnio`, `definirGrupos` y `seleccionarAnioTrabajo` requieren administración operativa;
 ser TOE/director por sí solo no confiere esa capacidad. Admiten años históricos sin un flujo de
-cierre/desbloqueo. Año desconocido o grupo equivalente repetido se rechazan; la comparación de
-grupos tolera tildes/mayúsculas/espacios según la normalización existente. Un grupo no informado
+cierre/desbloqueo. Registrar de nuevo un año existente o seleccionar el año de trabajo ya elegido
+devuelve la instancia actual. Definir grupos o seleccionar año de trabajo exige un año registrado;
+una lista con grupos equivalentes repetidos se rechaza. La comparación de grupos tolera
+tildes/mayúsculas/espacios según la normalización existente. Un grupo no informado
 es admisible; uno suministrado debe pertenecer al catálogo del año. Estas operaciones no tocan
 identidades, matrículas, incidencias, pendientes ni cierres y no infieren promoción o retiro.
 
@@ -1576,203 +1559,17 @@ grupos conocidos/no informados, duplicidad normalizada, delegación exacta, auto
 baja del cargador, delegación obsoleta en el mismo instante, versiones de catálogo/ventana,
 aviso mínimo, inmutabilidad y fechas. `SeleccionContextoInformeTest` cubre selección mínima,
 ausencias sin inferencia, cortes, antecedentes inexistentes y denegación al administrador o
-a una persona ajena al ámbito. La verificación conjunta final se detalla al final de este documento.
+a una persona ajena al ámbito. El resultado vigente se detalla en «Verificación reproducible».
 
 Los registros de aplicación deben conservar configuración/directorio/control actuales y usar
 versión esperada al guardar. La evidencia técnica continua, mostrar el aviso, interfaces de
 mantenimiento y la publicación de versiones son integración de aplicación/adaptadores.
 
-## Matriz para revisión de requisitos (base 1–7; ampliar con las continuaciones)
+## Cobertura de requisitos
 
-«Parcial» significa que se implementaron invariantes de dominio, no la aceptación completa del RF/CU.
+La tabla delimita las reglas disponibles en el núcleo y la integración necesaria para completar el producto.
 
-| ERS | Implementación y evidencia | Alcance pendiente |
-|---|---|---|
-| RF-01; RN-06, RN-26 | Cuentas, vigencias, altas/bajas y prohibición de autoatribución; `DirectorioUsuariosTest` | Autenticación, recuperación y mantenimiento persistente. |
-| RF-02 | `DatosInstitucion` recuperable en instantáneas de informe | Mantenimiento autorizado de institución/años/grupos; el valor no completa el RF. |
-| RF-03; RN-03, RN-09 | `Categoria`, parámetros y permiso de definición TOE/director; `CatalogoTest`, `PoliticaAccesoTest` | Carga delegada y persistencia de versiones; el incremento 6 ya conserva fundamentos de señales. |
-| RF-04, RF-06, RF-11; RN-17–18 | Identidad/matrícula/grupos y búsqueda pura; `EstudianteTest` | Conciliación global, importación, rectificación contradictoria, contactos y contexto. |
-| RF-05, RF-12–13; RN-02, RN-04–05 | Personas mínimas, roles individuales y capacidad de registro por rol; `ReporteIncidenciaTest`, `PoliticaAccesoTest` | Resolución contra identidades persistidas e integración de permisos. |
-| RF-15; RN-07 | Proyección propia sin aportes/revisiones institucionales ajenas; `PoliticaAccesoTest` | Consulta persistente y vistas de usuario. |
-| RF-14; RN-05 | Acción inmediata con compromiso sin caso y referencia sin copia al atender; `RegistroAtencionesTest` | Guardado transaccional conjunto con comunicación e interfaz. |
-| RF-22–23; RN-12 | Caso compartido, unicidad, corrección, antecedentes y continuidad; duplicados atendidos con elección explícita; `RegistroAtencionesTest`, `ContinuidadAtencionTest`, `CorreccionesIncrementosTest` | Persistencia de contenido/índices actuales y unicidad transaccional. |
-| RF-25–26; RN-13 | Realización/programación, acuerdos y seguimiento explícito; `ActuacionTest`, `CompromisoTest` | Presentación y recuperación persistente. |
-| RF-29–30; RN-15–16 | Derivación preparada/efectuada, cobertura familiar completa, cierre con pendientes y autoría formal; `DerivacionTest`, `CierreLocalTest`, `DerivacionYCierreCasoTest`, `ComiteAtencionTest` | Envíos externos institucionales y almacenamiento transaccional. |
-| RF-17 | Revisiones, aclaración propia, precisiones del hecho y anulación de cada fuente; `ReporteIncidenciaTest`, `IntegridadHechoTest`, `CorreccionesHechoTest` | Trazabilidad persistente y disposición jurídica de datos. |
-| RF-18; RN-01, RN-10 | Duplicados de hechos atendidos y separación motivada, origen/canónico trazables, continuidad y avisos sin copia; `HechoTest`, `CorreccionesHechoTest`, `CorreccionesIncrementosTest` | Guardado atómico de fuentes, relaciones, índices, casos y avisos. |
-| RF-19; RN-03, RN-08 | Señal inmediata, destinatarios elegibles y falta de designación sin divulgar contenido; `RegistroAlertasTest`, `ConflictosPreventivosTest` | Integración transaccional al guardar el reporte y entrega interna por interfaz. |
-| RF-20; RN-04, RN-09–10 | Contador y fundamento histórico por ventana/categoría/carácter, reevaluaciones y episodios por hechos nuevos; `CalculadoraReiteracionTest`, `RegistroAlertasTest` | Persistencia durable y activación desde entradas futuras. |
-| RF-21; RN-11 | Lectura separada, disposición, bandeja de trabajo real y coordinación con atención; `BandejaAtencionTest`, `SeguimientoInstitucionalTest` | Guardado transaccional de ambos estados y presentación/ordenación interactiva. |
-| RF-24 | Aclaraciones con originales intactos y permiso institucional; `HechoTest`, `PoliticaAccesoTest` | Integración del permiso y vínculo con actuaciones reales. |
-| RF-27; RN-06, RN-14 | Convocatoria, composición, intervención/decisiones/actuación/cierre en una operación y sustitución; `ComiteAtencionTest`, `CorreccionesIncrementosTest` | Interfaz y persistencia; no firma ni aprobación electrónica. |
-| RF-28; RN-08, RN-23 | Restricción anclada a origen, propagación según contenido, corrección sin contagio y reserva de documentos anteriores; suites de acceso, `CorreccionesIncrementosTest`, `ReservaDocumentosIntegracionTest` | Índices/restricciones actuales desde persistencia, sesiones y entrega efectiva de bytes. |
-| RF-31; RN-20, RN-23 | Consolidado, emisión estable y revisión completa con reutilización segura; iniciales/DNI específicas para violencia externa; `InformeCasoTest`, `InformeExternoTest`, `ReservaDocumentosIntegracionTest` | PDF, archivo durable y ficha contextual completa. |
-| RF-32; RN-20 | Actas PDF/DOCX hasta 10 MB, sustitución motivada y consulta/descarga autorizada; `ActasTest` | Inspección real de contenido, almacenamiento y descarga de archivos. |
-| RF-33; RN-21 | Referencias incompletas/completables y protocolo histórico, sin nuevos hechos/cierre; `ReferenciasOficialesTest` | Entrada/persistencia y medios externos institucionales. |
-| RNF-02 | Matriz explícita, roles acumulables y revalidación por operación; `PoliticaAccesoTest` | Aplicación uniforme en futuras entradas/adaptadores. |
-| RNF-08 | Fechas Perú, participaciones no duplicadas, copias inmutables | Integridad referencial global, transacciones, versión esperada y reintentos. |
-| CU-01–05 | Escenarios de dominio derivados, incluidos negativos y bordes | Ningún CU se declara aceptado de extremo a extremo. |
-
-RF-15–16 (consulta persistente completa) y RF-34–41 continúan pendientes,
-junto con importación/contexto/configuración y obligaciones transversales de seguridad. Los modelos
-y pruebas de RF-14, RF-19–33 no equivalen a aceptación completa de esos requisitos en una aplicación.
-
-## Contratos que faltan para integrar el monolito
-
-1. Autorizar antes de invocar operaciones institucionales y antes de entregar cualquier agregado.
-   Un UUID de autor registra autoría; **no comprueba permisos**. Usar la política del incremento 2
-   con directorio y restricciones actuales; el bloqueo jurídico todavía está pendiente.
-   El acceso al agregado no equivale a una vista permitida al reportante. Para consulta propia
-   usar su proyección limitada, no serializar `Hecho` ni `ReporteIncidencia` completos.
-2. Aplicar la exclusión por conflicto al conjunto de fuentes antes de avisar o consultar. Debe
-   revisarse todo `aportes`, incluida la cuenta de personal identificada solo en un duplicado.
-3. Resolver estudiantes y personal contra identidades existentes; validar el grupo histórico
-   conocido y obtener la clasificación de una categoría activa. El record de clasificación por sí
-   solo no prueba que el catálogo estuviera activo ni que el operador pudiera seleccionarlo.
-4. Mantener un solo ámbito institucional de ventana común. La unicidad global de documentos,
-   de relación reporte→hecho y de atención pendiente requiere coordinación entre agregados.
-5. Persistir reportes como fuentes independientes, relaciones y revisiones, incluidos reportes
-   desvinculados/anulados, precisiones institucionales y cambios de principal. No borrar un reporte
-   porque ya no aparezca en la relación actual. Conservar el ID estable del hecho y seleccionar
-   datos vigentes mediante las consultas del hecho, no leyendo `principal().datos()`.
-6. Guardar las nuevas instancias con versión esperada y transacción. Un llamador no puede reutilizar
-   una instantánea antigua sin detectar concurrencia. Los IDs los suministrará la operación
-   idempotente; `UUID.randomUUID()` solo se utiliza en pruebas, no dentro del dominio productivo.
-7. La fecha de evaluación debe venir de un reloj de aplicación convertido a Perú. Las fechas
-   de registro/cambio deben venir de una fuente confiable; el dominio no lee el reloj global.
-8. Un fundamento calculado no debe recalcularse para reconstruir una señal histórica: conservar
-   el valor emitido y enlazar las reevaluaciones sin modificar aquella evidencia.
-9. Persistir movimientos de cuentas/designaciones y restricciones, incluidos los retiros.
-   No reconstruir autorizaciones con versiones antiguas ni usar un contexto que omita relaciones.
-10. Ante cambios de clasificación, atribución, fuentes, anulación o parámetros, reevaluar los
-    fundamentos pertinentes con las fuentes actuales. Al guardar atención, conservar el resultado
-    conjunto de `SeguimientoInstitucional`; sus métodos no escriben una base de datos ni se activan
-    mediante un reloj/planificador oculto. Consultar documentos con un generador construido desde
-    registros actuales; un objeto emitido previamente no concede autorización futura.
-
-## Verificación reproducible de la base 1–7
-
-Entorno verificado: Windows/PowerShell, Microsoft OpenJDK 25.0.4.1, Maven Wrapper 3.9.16,
-compilación `release 25`, JUnit Jupiter 5.11.4 y Surefire 3.5.4 existentes en el proyecto.
-
-Comando desde la raíz, con `JAVA_HOME` apuntando a un JDK 25:
-
-```powershell
-.\mvnw.cmd -B -o clean test
-```
-
-La última verificación se hizo desde una compilación limpia para descartar clases o informes
-generados anteriormente. Se ejecutó sin red, usando dependencias ya presentes. En otra máquina sin caché, quitar `-o`
-para permitir que Maven resuelva las dependencias. No se modificó el wrapper ni el POM.
-
-| Suite | Pruebas ejecutadas |
-|---|---:|
-| `CatalogoTest` | 20 |
-| `EstudianteTest` | 16 |
-| `ReporteIncidenciaTest` | 18 |
-| `HechoTest` | 13 |
-| `IntegridadHechoTest` | 8 |
-| `CalculadoraReiteracionTest` | 20 |
-| `CorreccionesHechoTest` | 14 |
-| `DirectorioUsuariosTest` | 32 |
-| `RestriccionesAmbitoTest` | 15 |
-| `PoliticaAccesoTest` | 33 |
-| `ConflictosPreventivosTest` | 16 |
-| `ActuacionTest` | 15 |
-| `CompromisoTest` | 16 |
-| `DerivacionTest` | 14 |
-| `CierreLocalTest` | 9 |
-| `RegistroAtencionesTest` | 21 |
-| `DerivacionYCierreCasoTest` | 13 |
-| `ComiteAtencionTest` | 18 |
-| `ContinuidadAtencionTest` | 9 |
-| `RegistroAlertasTest` | 23 |
-| `BandejaAtencionTest` | 12 |
-| `ActasTest` | 7 |
-| `ReferenciasOficialesTest` | 4 |
-| `InformeCasoTest` | 10 |
-| `InformeExternoTest` | 12 |
-| `SeguimientoInstitucionalTest` | 3 |
-| `ReservaDocumentosIntegracionTest` | 3 |
-| `CorreccionesIncrementosTest` | 20 |
-| **Total** | **414** |
-
-Resultado final: **BUILD SUCCESS; 414 pruebas, 0 fallos, 0 errores y 0 omitidas**.
-El bloque anterior conservaba 109 pruebas; el incremento 2 añade 96 ejecuciones sin retirar las anteriores.
-Los incrementos 3 y 4 conservan esas 205 pruebas y añaden 88 ejecuciones de dominio.
-Los incrementos 5–7 conservaron las 293 anteriores y añadieron 97: 27 de comité/continuidad, 35 de alertas/bandeja,
-29 de documentos/referencias y 6 de integración. La revisión correctiva conserva las 390 ejecuciones y
-añade 24: 20 regresiones integradas y 4 de salida externa. Se compilaron desde limpio los 65 archivos productivos
-y 29 archivos Java de pruebas; se ejecutaron 28 suites. Comprobado además que `application` y
-`adapter` permanecen vacíos y que no hay importaciones de infraestructura en el dominio.
-Los informes generados por Maven están en `target/surefire-reports`; se regeneran con el comando.
-Todos los ejemplos son ficticios. La revisión adicional detectó y corrigió la propagación del
-marcador de atención y las asociaciones contradictorias de cuentas de personal; sus regresiones
-se conservaron en `IntegridadHechoTest`.
-
-Las correcciones posteriores añaden `CorreccionesHechoTest`: precisión trazable sin reescribir
-fuentes; consultas y cómputo por fecha/categoría vigentes; fechas aproximadas/futuras y orden
-temporal; avisos y solicitudes expresas; naturaleza/gravedad; conservación de atribuciones;
-principal anulado con otro válido; cambio de principal sin cambiar ID ni contar dos veces;
-causas, referencias válidas e historia inmutable; retirada del anterior principal; anulación
-de todas las fuentes; y conservación de las decisiones al modificar las relaciones.
-Se sustituyó la expectativa incorrecta de `HechoTest` que excluía el hecho completo al anular
-solo su principal. Las otras pruebas del incremento se conservan y pasan.
-
-El incremento 2 verifica la matriz por rol, acumulación de roles sin ampliar configuración,
-vigencias/bajas, anti autoatribución, fuentes de exclusión independientes y retiros motivados,
-aportes propios frente a ajenos, reservas de caso en filtros por contexto, sustituciones y
-destinatarios. También reproduce denuncia en duplicado, identificación posterior, correcciones,
-anulación y cambio de principal, aclaración que introduce una atribución, descarte posterior,
-retiro que no revive al recalcular, nueva fuente/transición y contextos con decisiones futuras.
-Las pruebas de acceso usan personas, cuentas, relaciones y decisiones ficticias.
-
-Las seis suites de atención verifican además guardado único de conversación/compromiso/cierre,
-unicidad por hecho, actos previstos que no cuentan realizados, continuidad explícita de acuerdos,
-vínculos/antecedentes sin copia, cierre por último vínculo erróneo, acciones inmediatas por referencia,
-propagación de reserva, identificación posterior de personal, restricciones del caso, nuevos hechos
-sin reapertura, corrección de cierre con revalidación y derivación familiar total frente a parcial.
-También prueban ejecución directa, referencia opcional, fuentes desconocidas, versiones anteriores,
-IDs duplicados, causa requerida, fechas futuras/incoherentes y colecciones inmutables.
-
-Las suites del incremento 5 verifican convocatoria expresa sin cambio de estado, composición de
-designaciones, elegibilidad, sustituciones y operador real; intervención histórica documentada tarde,
-cese posterior, fechas, inmutabilidad, vía formal y rechazo de revisión por método individual.
-La continuidad prueba conservación de actuaciones, fuente con otros hechos o trabajo pendiente,
-cierre técnico al agotarlos, reserva transitiva, unicidad y reasignación elegible sin motivo añadido.
-
-Las del incremento 6 verifican gravedad inmediata aun con papel desconocido, fuentes discrepantes,
-riesgo expreso, parámetros ausentes, reiteración y caracteres conservados, lectura separada,
-recalcular sin duplicar avisos y episodios por hechos nuevos. Incluyen combinación de motivos y
-gestiones anteriores, cambios de principal/duplicidad, rechazo de evidencia futura, destinatarios
-TOE/sustitutos, ausencia de elegibles, exclusión posterior y bandeja con pendientes reales.
-
-Las del incremento 7 cubren informes con fuentes/rectificaciones y principal vigente, participantes
-solo del duplicado, discrepancias, comité, reasignación y continuidad sin motivo rutinario adicional;
-actas PDF/DOCX en el límite y exceso, sustitución trazable, causa de sustitución del director y
-versión de descarga; referencias
-incompletas/completables sin nuevo hecho ni cierre. La salida externa prueba selección, base y riesgo,
-revisión institucional y adecuación selectiva, reutilización de textos seguros e iniciales/DNI para
-violencia externa; también identificación autorizada sin esa transformación en documentos no violentos.
-
-`SeguimientoInstitucionalTest` recorre lectura y atención con conversación/cierre en el mismo
-resultado, no gestión de un hecho ajeno y repetición sin duplicados. `ReservaDocumentosIntegracionTest`
-comprueba inmutabilidad del informe emitido y revocación por exclusión explícita o por identificar
-después al denunciado únicamente en un reporte duplicado.
-
-Para revisar esta entrega, comenzar por la revisión correctiva, contrastar la matriz y los contratos
-de los incrementos 1–7 y ejecutar las
-suites y comprobar también sus escenarios negativos. Pasar las pruebas no certifica persistencia,
-rendimiento, autenticación, descarga efectiva ni aceptación integral de la ERS.
-
-## Cierre consolidado y siguiente capa del monolito
-
-Las continuaciones incorporan las reglas pendientes identificadas después de 8A. El criterio de
-cierre es disponer de reglas de negocio, estados inmutables, proyecciones autorizadas y pruebas
-de invariantes; no que una aplicación funcional haya aceptado todos los requisitos. Los pendientes
-indicados en apartados históricos 1–7/8A deben leerse con esta matriz y las continuaciones anteriores.
-
-| ERS | Estado de dominio al cierre | Integración posterior |
+| ERS | Reglas de dominio implementadas | Integración posterior |
 |---|---|---|
 | RF-01–03 | Cuentas/designaciones y política existentes; institución/aviso/alcance/catálogo/ventana versionados, carga exacta delegada y años/grupos explícitos | Sesiones/recuperación, persistencia y pantallas de mantenimiento. |
 | RF-04–07 | Identidad y búsquedas mínimas, personas participantes, contactos/contexto con procedencia e historial reservado y selección pertinente para informes | Resolución persistente de identidades y entrega de vistas mínimas. |
@@ -1784,7 +1581,8 @@ indicados en apartados históricos 1–7/8A deben leerse con esta matriz y las c
 | RF-38–40 | Evidencia tipada, consulta/extracción restringida, mínimo de conservación de evidencia, mandato específico, bloqueo/disposición verificable, aviso y alcance admitido | Evidencia automática junto a cada operación, persistencia protegida, inventario exhaustivo de copias y ejecución física/relectura; gestión institucional externa de derechos. |
 | RF-41; RNF operativos | Contratos de preservación/restauración de decisiones y reserva; no se modela un panel o scheduler ajeno al dominio | Herramientas de respaldo, ensayo de restauración, entrega recuperable, monitoreo y procedimientos de operación. |
 
-### Contratos obligatorios de integración
+
+## Contratos obligatorios de integración
 
 1. Cargar versiones actuales coherentes de registros, directorio, exclusiones, control jurídico y
    configuración. Los constructores compatibles sin control jurídico representan instalaciones
@@ -1812,172 +1610,46 @@ indicados en apartados históricos 1–7/8A deben leerse con esta matriz y las c
    trabajo se interpretan en Perú; datos desconocidos no se completan por conjetura. No publicar
    relatos, documentos o datos contextuales como parte de una respuesta estadística o un log técnico.
 
-### Punto de continuación
+8. Resolver personas contra identidades existentes y obtener clasificaciones para nuevos hechos desde categorías activas. Un UUID de autor o un record de clasificación construido por el cliente no acreditan permiso ni vigencia del catálogo.
+9. Conciliar matrícula con padrón/índice completo y guardar identidad, matrícula, contexto, confirmación y evidencia en una misma operación recuperable. Conservar IDs y contenido del lote durante reintentos; no reemplazar datos no cargados con una colección parcial.
+10. Para emitir o consultar un informe, aportar el registro actual de todas sus actas citadas y sus revisiones. Para una salida estadística, revalidar también las fuentes que solo aportaron cobertura, y los casos que aportaron estado/intervención. No entregar bytes almacenados por una ruta que evite estos controles.
 
-Implementar la capa de aplicación por casos de uso y sus puertos, seguida de adaptadores, conservando
-estas reglas. No introducir reglas de negocio implícitas en controladores/parser/repositorios para
-suplirlas. La siguiente validación de producto debe cubrir aceptación de los CU de extremo a extremo,
-incluyendo fallos/reintentos y dos sesiones concurrentes, no solo repetir las suites unitarias.
+## Verificación reproducible
 
-## Verificación conjunta final — 22 de octubre de 2026
-
-Comando desde `SistemaIncidenciasEscolaresBackend`, con Oracle JDK 27 y compilación `release 25`:
+Comando desde `SistemaIncidenciasEscolaresBackend`, con Oracle JDK 27 y compilación
+`release 25`. `JAVA_HOME` debe apuntar al JDK disponible en la instalación:
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Java\jdk-27'
 .\mvnw.cmd -B -o clean test
 ```
 
-Resultado real: **BUILD SUCCESS; 610 pruebas, 0 fallos, 0 errores, 0 omitidas**.
-Se compilaron desde limpio 90 archivos Java productivos y 42 de pruebas (40 suites y dos auxiliares).
-No se modificó el POM ni se añadieron dependencias productivas. Las 455 ejecuciones anteriores
-permanecen y se incorporan 155 nuevas:
+Sin dependencias descargadas previamente se omite `-o`. Resultado comprobado el 22-10-2026:
+**BUILD SUCCESS; 651 pruebas, 0 fallos, 0 errores y 0 omitidas**. Se recompilaron desde limpio
+90 archivos productivos y 45 de pruebas. No se modificó el POM ni se añadieron dependencias.
 
-| Suite nueva | Ejecuciones |
+| Paquete | Ejecuciones |
 |---|---:|
-| `RegistroImportacionTest` | 28 |
-| `AsociacionColumnasTest` | 6 |
-| `MotorEstadisticasTest` | 16 |
-| `ReconciliacionMedidasTest` | 24 |
-| `HistorialYSalidaTest` | 10 |
-| `ConfiguracionInstitucionalTest` | 13 |
-| `SeleccionContextoInformeTest` | 6 |
-| `ProteccionDatosTest` | 21 |
-| `BloqueoJuridicoIntegracionTest` | 27 |
-| `PersonaExternaDatosTest` | 4 |
-| **Nuevas** | **155** |
+| Acceso | 98 |
+| Alertas | 59 |
+| Atención | 148 |
+| Catálogo | 21 |
+| Consultas | 58 |
+| Documentos | 76 |
+| Estudiantes e importación | 101 |
+| Incidencias | 53 |
+| Institución | 14 |
+| Protección | 23 |
+| **Total** | **651** |
 
-La revisión cruzada corrigió antes del cierre: doble recuento de altas con contexto; homónimos
-jurídicamente bloqueados que no deben revelar candidatos ni afectar identidades seguras diferentes;
-grupos estadísticos tomados de matrícula en lugar de la participación histórica; omisión de actos
-efectivos tras anular todas las fuentes; lectura de contexto al corte anterior a un borrado;
-revalidación de recursos embebidos y del contenido candidato antes de guardar bajo bloqueo.
-Los datos de prueba son ficticios. No se modificó el contenido de la ERS.
+La suite comprueba escenarios positivos y negativos con datos ficticios: permisos/conflictos,
+revocación de recursos y documentos anteriores, identidad/importación por fila, reintentos,
+grupos históricos, conteos reconciliados, atención/cierre, autorías y disposición verificable.
+`AuditoriaAlertasTest`, `AuditoriaConsultasTest` y `AuditoriaAtencionTest` comprueban regresiones
+de alertas, proyecciones, atención, autorías y reserva junto con las suites de cada concepto.
 
-Entrega en `feature/domain-importacion-matricula`, sin fusionar a `main`. Al cerrar esta entrega
-solo se versionaba el README principal; la auditoría posterior incorpora también la ERS y este
-documento al repositorio. No deben confundirse los contratos puros de disposición/descarga con
-ejecución física de eliminación, entrega de bytes o aceptación integral del producto.
-
-## Auditoría integral del dominio — 22 de octubre de 2026
-
-Fuente: ERS v1.2, sin modificar sus requisitos. Se revisaron los diez paquetes productivos y sus
-pruebas, contrastando invariantes, reserva de datos, flujos ordinarios, reintentos, mantenimiento
-y límites entre dominio e integración. Las 610 pruebas anteriores pasaban antes de corregir los
-hallazgos; ese resultado no se tomó como prueba de que los contratos estuvieran completos.
-Este apartado actualiza los contratos anteriores cuando describe una corrección de la auditoría.
-
-### Identidad, importación y configuración
-
-| Hallazgo | Corrección y contrato vigente | ERS |
-|---|---|---|
-| Un grupo inválido abortaba el lote, incluso si su fila se había excluido expresamente. | `RegistroImportacion.previsualizar` localiza errores por fila, conserva las válidas e ignora la fila excluida. `confirmar` comprueba que los grupos aceptados siguen admitidos por la configuración actual. | RF-09–10; RNF-08, RNF-12. |
-| Filtrar primero las filas con contexto inválido ocultaba sus conflictos de identidad con las demás. | Se elimina el lote intermedio filtrado: `RegistroMatriculas.previsualizar` recibe los errores de la fila completa y comprueba documentos repetidos sobre el lote original. No se guarda una identidad por haber desaparecido su fila contradictoria del análisis. | RF-10–11; RN-17–18. |
-| Diferencias de tildes/mayúsculas/espacios generaban contradicciones de grupo. | `GrupoEscolar.equivalenteA` comparte la comparación entre matrícula y configuración. Reincorporar el grupo equivalente en la misma fecha conserva la instancia. Las observaciones de fechas posteriores se mantienen: son necesarias para que una rectificación anterior no reescriba lo conocido después. | RF-02, RF-10–11; RNF-19. |
-| Una previsualización de otra instantánea permitía reintentar el lote de otro operador. | `RegistroMatriculas.confirmar` exige también el autor de la confirmación original antes de devolver el resultado existente. | RF-10; RNF-02, RNF-08. |
-| El nacimiento podía incorporarse después con fecha posterior a una matrícula ya guardada. | El agregado `Estudiante` comprueba nacimiento contra todas sus matrículas, tanto al incorporar identidad como al añadir un año histórico. El error de importación sigue localizado en su fila. | RF-06, RF-09; RNF-08. |
-| Dos homónimos se presentaban únicamente con nombre y UUID. | `Coincidencia` añade referencias escolares mínimas con año, fecha y grupo conocido. Nombre/documento muestran solo la matrícula más reciente; año/grupo muestran la referencia expresamente consultada. No devuelve situación, contactos, nacimiento, contexto o historia de atención. | RF-04; RNF-05, RNF-12. |
-| Un espacio de no separación podía eludir la validación de tipo DNI o admitir un nombre/grupo vacío. | Se reconocen blancos Unicode al validar identidad y grupo; el DNI sigue exigiendo ocho dígitos ASCII y conserva sus ceros. | RF-09; RN-18. |
-| Reaplicar los mismos valores de catálogo/ventana inflaba las revisiones sin cambiar reglas. | `Categoria` y `ParametrosReiteracion` devuelven la instancia existente cuando no cambia su contenido. Se mantienen validaciones de autor/tiempo. | RF-03; RNF-22. |
-
-### Reserva, documentos y evidencia
-
-| Hallazgo | Corrección y contrato vigente | ERS |
-|---|---|---|
-| Un informe emitido podía conservar información de un acta/archivo/referencia bloqueados después de su corte. | `GeneradorInformeCaso.autorizarInstantanea` revalida las actas citadas y los recursos proyectados: archivos, referencias, actuaciones/compromisos, derivaciones y actos de gobierno. Se rechaza la instantánea completa si alguna fuente está bloqueada. | RF-28, RF-31–32, RF-39; RNF-02. |
-| Sustituir un acta protegía solo el ámbito de su versión vigente, aunque el agregado devolvía las anteriores. | `RegistroActas.exigirConsulta` comprueba todas las revisiones, archivos y ámbitos originales conservados. La descarga individual autoriza el acta solicitada; un acta ajena bloqueada no impide descargar otra permitida. | RF-17, RF-28, RF-32; RNF-02. |
-| Los nombres de adjuntos admitían controles y caracteres de rutas o flujos alternativos. | `ArchivoAdjunto` rechaza controles y caracteres de ruta, incluidos dos puntos. Mantiene formatos PDF/DOCX y límite existente. La inspección del archivo real continúa en el adaptador. | RNF-04. |
-| Un nombre corto protegido, como «Ana», bloqueaba textos inocuos como «semana» en informes externos. | La detección de nombres literales respeta límites Unicode de palabra. El nombre independiente sigue requiriendo adecuación; no se presume que el software anonimice un relato por sí solo. | RF-31; RNF-05, RNF-12. |
-| Los criterios de evidencia podían contener personas fuera del alcance declarado; un evento bloqueado por ID seguía en extracciones. | `RegistroEvidencia.Evento` exige que las personas de criterios pertenezcan al alcance. La extracción comprueba también el bloqueo del ID del evento. | RF-38–39; RNF-02, RNF-07. |
-| Reconstituir evidencia copiaba y recorría toda la historia por cada evento. | `RegistroEvidencia.cargar` valida orden y unicidad en una sola pasada y construye una instantánea: coste lineal, sin infraestructura adicional. | RNF-16, RNF-22. |
-| Una baja o cese explícito podía dejar la instalación sin administrador para recuperar sus cuentas. | `DirectorioUsuarios` rechaza esas transiciones cuando no queda otro administrador vigente en su fecha efectiva. Se designa el reemplazo antes de retirar al último. Esto no sustituye revisar vencimientos futuros. | RF-01, RF-41; RNF-17, RNF-20. |
-
-### Hechos y atención
-
-| Hallazgo | Corrección y contrato vigente | ERS |
-|---|---|---|
-| Se podían guardar actuaciones, compromisos o derivaciones con nuevas revisiones atribuidas a otro operador. | El guardado común de `RegistroAtenciones` verifica autor y tiempo de las revisiones nuevas, incluidas las anidadas. Las revisiones ya almacenadas conservan su autor original al intervenir otro responsable. | RF-25–26, RF-29, RF-38; RNF-07–08. |
-| Una política externa sin las exclusiones guardadas permitía leer actuaciones restringidas. | Las sobrecargas de consulta aplican también las restricciones y protección propias del registro; una política incompleta no las retira. Las actuaciones inmediatas posteriores al corte tampoco se entregan desde un caso anterior. | RF-16, RF-28; RNF-02, RNF-08. |
-| La constancia de protección urgente de un autor ordinario se rechazaba por tratarse de un hecho grave. | Se usa un único permiso `REGISTRAR_ACCION_INMEDIATA`: autor propio, cuenta vigente y ausencia de atención, conflicto o bloqueo. `registrarInmediata` permite documentar la protección ya realizada sin abrir caso; los compromisos cotidianos siguen limitados a la clasificación disciplinaria leve. | RF-12–14; RNF-10; RN-27. |
-| Faltaba una consulta autorizada de las acciones inmediatas propias, sin entregar el agregado completo. | `inmediatasDelAutor` usa `CONSULTAR_APORTE_PROPIO` y devuelve `AccionInmediataPropia`, `RevisionPropia` y `CompromisoPropio` como valores anidados. Conserva lectura tras abrir atención y filtra las revisiones institucionales ajenas, incluidas las del compromiso. Conflicto y bloqueo siguen revocándola. | RF-14–15; RNF-02; RN-07. |
-| Retirar un vínculo podía retirar también su reserva aunque el hecho permaneciera descrito en una conclusión. | `CasoAtencion.hechosReservados` y la detección de contenido incorporan conclusiones reales conservadas en el historial de cierre. Corregir el vínculo no libera el contenido histórico que sigue revelando la denuncia. | RF-17, RF-23, RF-28, RF-30; RNF-02. |
-| Bloquear convocatoria/intervención/decisión del comité no protegía siempre su contenido embebido en el caso. | `RegistroAtenciones.proteccion` relaciona esos UUID con el ámbito completo del caso, igual que actuaciones, compromisos y derivaciones. | RF-27–28, RF-39; RNF-02. |
-
-### Alertas, consultas y resultados
-
-| Hallazgo | Corrección y contrato vigente | ERS |
-|---|---|---|
-| Bloquear el UUID de una señal o aviso no revocaba todas sus lecturas/listados. | `RegistroAlertas` comprueba recursos en detalle, gestión, reevaluación, lectura y listados. La bandeja omite fundamentos históricos de señales bloqueadas. Los accesores completos siguen reservados a persistencia confiable. | RF-21, RF-28, RF-39; RNF-02, RNF-06. |
-| La carga admitía dos avisos distintos para el mismo destinatario/señal y consultas con lecturas posteriores al corte. | `cargarAmbito` exige un aviso por pareja y emisión posterior o igual a la señal. La consulta rechaza metadatos posteriores al instante solicitado. | RF-21; RNF-08, RNF-19. |
-| Un grupo/hora omitidos en un reporte duplicado se confundían con contradicción de datos conocidos. | Las consultas combinan información conocida complementaria sin completar desde el padrón actual. Variantes equivalentes de grupo conservan la primera forma declarada; valores conocidos realmente distintos continúan discrepantes. | RF-16, RF-18, RF-34–35; RNF-19. |
-| Las estadísticas de señales pendientes incluían motivos que ya se habían retirado. | `ALERTAS_PENDIENTES` usa motivos vigentes. Emisiones/gestiones conservan los motivos de su historia, sin reescribir la señal original. | RF-19–21, RF-34. |
-| Una salida vacía por filtro/período conservaba cobertura de fuentes que no revalidaba al descargar. | `ResultadoEstadistico` conserva recursos y ámbitos de todas las unidades evaluadas, también las que solo contribuyen a cobertura. `SalidaEstadistica` revalida el corte completo. | RF-28, RF-37, RF-39; RNF-02. |
-| El estado/comité de un caso compartido podía revelarse por un hecho permitido aunque otra fuente del caso estuviera excluida. | Historial y estadísticas autorizan el caso completo y aplican también las restricciones propias del registro antes de proyectarlo. No se publica un caso restringido mediante una política externa incompleta. | RF-16, RF-28, RF-35; RNF-02. |
-| El historial confundía estado institucional de hechos anulados y combinaba criterios de revisiones distintas. | Los anulados usan estado real del caso y conjunción de persona, fecha y criterios sobre la misma revisión histórica, sin crear participaciones vigentes ni volver a contarlos. | RF-16–17; RNF-19. |
-| Buscar persona en el historial era menos tolerante que buscar estudiante. | Se reutiliza `BusquedaEstudiantes.normalizar` para tildes, mayúsculas y espacios Unicode en búsquedas institucionales y propias. | RF-04, RF-15–16; RNF-12. |
-
-### Simplificación y contratos de integración actualizados
-
-Se conservaron los paquetes por concepto y las instantáneas inmutables. No se añadieron frameworks,
-capas, dependencias productivas ni un motor genérico de validación. Las simplificaciones concretas
-son eliminar el lote filtrado intermedio, compartir comparación/normalización, centralizar la
-autorización individual de actas y cargar evidencia en una pasada. No se fusionaron conceptos
-independientes solo para reducir la cantidad de archivos.
-
-`RegistroAtenciones` calcula una vez sus relaciones de protección al construir cada instantánea,
-después del índice de reserva, y las conserva en `proteccionEfectiva`. Las copias internas conservan
-el control recibido y recalculan las relaciones para su nuevo estado. No se guardan decisiones de
-permiso: cada operación sigue evaluando usuario, vigencia y bloqueos actuales. Esto evita reconstruir
-todos los ámbitos por cada autorización de una consulta o estadística.
-
-`ConsultaHistorial(registro, hechosCargados, politicaActual)` deja de pedir un `RegistroMatriculas`
-que no utilizaba. Evita cargar datos personales innecesarios y mantiene los grupos del hecho.
-`Coincidencia.referenciasEscolares` es inmutable; una persona sin matrícula devuelve la lista vacía.
-Los adaptadores deberán actualizar estas firmas/proyecciones al implementarse.
-
-El generador de informes debe recibir el `RegistroActas` actual con todas las actas citadas y sus
-versiones históricas. Una fuente ausente se rechaza; no equivale a permiso para omitir su bloqueo.
-Las políticas y registros se cargan coherentes con las restricciones actuales. Revalidar fuentes
-en memoria no revoca copias que un usuario ya descargó legítimamente.
-
-La ERS y este documento pasan a versionarse junto al código. Se mantiene la exclusión de datos
-reales de matrícula, compilados, credenciales y configuración local. Los apartados históricos
-conservan sus cifras y fechas; la comprobación posterior de esta auditoría se registra a continuación.
-
-### Verificación y límites de la auditoría
-
-La referencia inicial fue `mvnw.cmd -B -o clean test`: 610 ejecuciones correctas, con JDK 27 y
-compilación `release 25`. Las regresiones nuevas usan datos ficticios y escenarios negativos,
-incluida revocación posterior de documentos, errores parciales de lote y reintentos.
-
-Comprobación integral posterior a todas las correcciones, desde
-`SistemaIncidenciasEscolaresBackend`:
-
-```powershell
-$env:JAVA_HOME = 'C:\Program Files\Java\jdk-27'
-.\mvnw.cmd -B -o clean test
-```
-
-Resultado real del 22-10-2026: **BUILD SUCCESS; 651 pruebas, 0 fallos, 0 errores, 0 omitidas**.
-Se recompilaron desde limpio 90 archivos productivos y 45 archivos de pruebas (43 suites y dos
-auxiliares). Se añadieron 41 ejecuciones respecto de la base de 610; no se añadieron dependencias
-ni se modificó el POM. `git diff --check` no detectó errores de espacios.
-
-| Bloque verificado | Ejecuciones |
-|---|---:|
-| Acceso, documentos y protección | 197 |
-| Estudiantes, importación, catálogo e institución | 136 |
-| Hechos y atención | 201 |
-| Alertas y consultas | 117 |
-| **Total integral** | **651** |
-
-Las tres suites nuevas son `AuditoriaAlertasTest` (4), `AuditoriaConsultasTest` (8) y
-`AuditoriaAtencionTest` (7). Las 22 ejecuciones nuevas restantes amplían suites existentes.
-Se ajustaron fixtures que retiraban al único administrador o atribuían una actuación al operador
-equivocado; se conservó su objetivo original de comprobar revocación y atención autorizada.
-
-La auditoría se limita al dominio implementado. Autenticación/sesiones, transacciones durables,
-concurrencia entre dos sesiones, parser Excel, inspección/almacenamiento de adjuntos, generación
-de bytes, respaldo/restauración y pruebas de accesibilidad o tareas cronometradas requieren las
-capas de aplicación/adaptadores e interfaz. No se declara cumplimiento de extremo a extremo ni
-aptitud para datos reales por superar estas pruebas.
+`target/surefire-reports/` contiene los resultados regenerables y no se versiona. Las pruebas de
+dominio no acreditan autenticación/sesiones, concurrencia entre dos sesiones, almacenamiento,
+parser Excel, inspección de archivos, generación efectiva PDF/CSV/XLSX, respaldo/restauración ni
+accesibilidad, rapidez o facilidad de uso de una interfaz todavía inexistente. La aceptación
+integral de la ERS requiere implementar y ensayar esas capas y sus procedimientos operativos.
